@@ -99,6 +99,10 @@ php artisan key:generate
 
 # Database setup
 touch database/database.sqlite
+#On Windows, to create an empty file, they can use:
+type nul > database/database.sqlite
+Or using PowerShell: New-Item -Path database/database.sqlite -ItemType File
+
 php artisan migrate --seed
 
 # Build assets
@@ -116,7 +120,11 @@ If you prefer to run services individually:
 # Terminal 1: Laravel development server
 php artisan serve
 
+php artisan reverb:install
 # Terminal 2: Laravel Reverb (WebSocket server)
+bash
+php artisan reverb:apps create
+
 php artisan reverb:start
 
 # Terminal 3: Queue worker
