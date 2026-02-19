@@ -17,13 +17,17 @@ class RiderOrdered implements ShouldBroadcastNow
     public $clientId;
     public $clientName;
     public $serviceType;
+    public $pickup;
+    public $dropoff;
 
-    public function __construct($riderId, $clientId, $clientName, $serviceType)
+    public function __construct($riderId, $clientId, $clientName, $serviceType, $pickup = null, $dropoff = null)
     {
         $this->riderId = $riderId;
         $this->clientId = $clientId;
         $this->clientName = $clientName;
         $this->serviceType = $serviceType;
+        $this->pickup = $pickup;
+        $this->dropoff = $dropoff;
     }
 
     public function broadcastOn(): array

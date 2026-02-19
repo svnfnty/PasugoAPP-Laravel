@@ -1,0 +1,1710 @@
+/* ============================================================
+   PASUGO MAP — Premium Stylesheet v2
+   ============================================================
+   Sections:
+     1.  Reset & Design Tokens
+     2.  Base / Layout
+     3.  Leaflet Overrides
+     4.  Top Header Bar
+     5.  Service Panel (Bottom Sheet)
+     6.  Service Tabs (Pahatod / Pasugo)
+     7.  Route Input Forms
+     8.  Search Suggestions
+     9.  Find Riders Button
+     10. Riders List Section
+     11. Rider Card
+     12. Rider Profile Overlay
+     13. Chat Overlay
+     14. Chat Messages
+     15. Chat Input
+     16. Map Markers
+     17. Empty & Loading States
+     18. Waiting Animation
+     19. Keyframe Animations
+     20. Responsive
+   ============================================================ */
+
+
+/* ==========  1. Reset & Design Tokens  ========== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    /* ─ Core Palette ─ */
+    --primary: #FF6B35;
+    --primary-dark: #E85D2C;
+    --primary-glow: rgba(255, 107, 53, 0.35);
+    --primary-light: #FFF0EB;
+
+    --secondary: #0F1123;
+    --secondary-light: #1A1D35;
+    --secondary-mid: #252845;
+
+    --accent: #00D68F;
+    --accent-dark: #00B377;
+    --accent-light: #E6FFF6;
+    --accent-glow: rgba(0, 214, 143, 0.25);
+
+    --pasugo-color: #6C5CE7;
+    --pasugo-glow: rgba(108, 92, 231, 0.3);
+    --pasugo-light: #F0EEFF;
+
+    /* ─ Surfaces ─ */
+    --surface: #FFFFFF;
+    --surface-dim: #F4F5FA;
+    --surface-glass: rgba(255, 255, 255, 0.88);
+
+    /* ─ Text ─ */
+    --text-primary: #0F1123;
+    --text-secondary: #5A5F7A;
+    --text-tertiary: #9399B2;
+    --text-inverse: #FFFFFF;
+
+    /* ─ Borders ─ */
+    --border: #E2E5F1;
+    --border-light: #EEF0F8;
+
+    /* ─ Shadows ─ */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.12);
+    --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.18);
+
+    /* ─ Radii ─ */
+    --radius-xs: 8px;
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-xl: 28px;
+    --radius-pill: 100px;
+
+    /* ─ Safe Areas ─ */
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+
+    /* ─ Transitions ─ */
+    --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+/* ==========  2. Base / Layout  ========== */
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--secondary);
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#map {
+    flex: 1;
+    z-index: 1;
+}
+
+
+/* ==========  3. Leaflet Overrides  ========== */
+
+.leaflet-touch .leaflet-bar {
+    border: none;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.leaflet-touch .leaflet-control-zoom-in,
+.leaflet-touch .leaflet-control-zoom-out {
+    width: 42px !important;
+    height: 42px !important;
+    line-height: 42px !important;
+    font-size: 18px !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+    background: var(--surface) !important;
+    transition: background 0.15s;
+}
+
+.leaflet-touch .leaflet-control-zoom-in:hover,
+.leaflet-touch .leaflet-control-zoom-out:hover {
+    background: var(--surface-dim) !important;
+}
+
+.leaflet-control-layers {
+    border-radius: var(--radius-sm) !important;
+    border: none !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+
+/* ==========  4. Top Header Bar  ========== */
+
+.map-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    padding: 16px;
+    padding-top: max(16px, var(--safe-top));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+}
+
+.map-header>* {
+    pointer-events: auto;
+}
+
+.btn-back {
+    width: 48px;
+    height: 48px;
+    background: var(--surface);
+    border: none;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-spring);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.btn-back:hover {
+    transform: scale(1.06);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-back:active {
+    transform: scale(0.94);
+}
+
+.logo-pill {
+    background: var(--surface-glass);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 10px 28px;
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.logo-text {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--primary) 0%, #FF3D00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.btn-locate {
+    width: 48px;
+    height: 48px;
+    background: var(--surface);
+    border: none;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-spring);
+    color: var(--primary);
+}
+
+.btn-locate:hover {
+    transform: scale(1.06);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-locate:active {
+    transform: scale(0.94);
+}
+
+
+/* ==========  5. Service Panel (Bottom Sheet)  ========== */
+
+.service-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--surface);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: 0 -8px 48px rgba(0, 0, 0, 0.12), 0 -2px 12px rgba(0, 0, 0, 0.06);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.5s var(--ease-out);
+    transform: translateY(0);
+    padding-bottom: var(--safe-bottom);
+    overflow: hidden;
+}
+
+.service-panel.collapsed {
+    transform: translateY(calc(100% - 90px));
+}
+
+.panel-handle-area {
+    padding: 14px 24px 4px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+}
+
+.panel-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border);
+    border-radius: var(--radius-pill);
+    margin: 0 auto;
+    transition: background 0.2s;
+}
+
+.panel-handle-area:hover .panel-handle {
+    background: var(--text-tertiary);
+}
+
+
+/* ==========  6. Service Tabs (Pahatod / Pasugo)  ========== */
+
+.service-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 8px 20px 12px;
+    flex-shrink: 0;
+}
+
+.service-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.3s var(--ease-spring);
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    overflow: hidden;
+}
+
+.service-tab::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: inherit;
+}
+
+.service-tab:hover {
+    border-color: var(--text-tertiary);
+    transform: translateY(-1px);
+}
+
+.service-tab:active {
+    transform: scale(0.97);
+}
+
+/* Pahatod Active */
+.service-tab#tab-pahatod.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    box-shadow: 0 4px 20px var(--primary-glow);
+}
+
+.service-tab#tab-pahatod.active .tab-label {
+    color: var(--primary);
+}
+
+.service-tab#tab-pahatod.active .tab-desc {
+    color: var(--primary-dark);
+}
+
+/* Pasugo Active */
+.service-tab#tab-pasugo.active {
+    border-color: var(--pasugo-color);
+    background: var(--pasugo-light);
+    box-shadow: 0 4px 20px var(--pasugo-glow);
+}
+
+.service-tab#tab-pasugo.active .tab-label {
+    color: var(--pasugo-color);
+}
+
+.service-tab#tab-pasugo.active .tab-desc {
+    color: #5A4BD1;
+}
+
+.tab-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.tab-label {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+    line-height: 1.1;
+}
+
+.tab-desc {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: absolute;
+    bottom: 10px;
+    right: 14px;
+}
+
+
+/* ==========  7. Route Input Forms  ========== */
+
+.service-form {
+    padding: 0 20px 16px;
+    flex-shrink: 0;
+    animation: fadeSlideUp 0.3s var(--ease-out);
+}
+
+.service-form.hidden {
+    display: none;
+}
+
+.route-inputs {
+    margin-bottom: 14px;
+}
+
+.route-line {
+    display: flex;
+    gap: 14px;
+}
+
+.route-dots {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0 20px 4px;
+    flex-shrink: 0;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.dot-start {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.dot-end {
+    background: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.dot-start.pasugo-dot {
+    background: var(--pasugo-color);
+    box-shadow: 0 0 0 3px var(--pasugo-glow);
+}
+
+.dot-end.pasugo-dot {
+    background: var(--pasugo-color);
+    box-shadow: 0 0 0 3px var(--pasugo-glow);
+}
+
+.dot-line {
+    width: 2px;
+    flex: 1;
+    background: repeating-linear-gradient(to bottom,
+            var(--border) 0px,
+            var(--border) 4px,
+            transparent 4px,
+            transparent 8px);
+    min-height: 20px;
+}
+
+.dot-line.pasugo-line {
+    background: repeating-linear-gradient(to bottom,
+            var(--pasugo-color) 0px,
+            var(--pasugo-color) 4px,
+            transparent 4px,
+            transparent 8px);
+    opacity: 0.4;
+}
+
+.route-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.loc-input {
+    flex: 1;
+    background: var(--surface-dim);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.loc-input::placeholder {
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+.loc-input:focus {
+    border-color: var(--primary);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+#form-pasugo .loc-input:focus {
+    border-color: var(--pasugo-color);
+    box-shadow: 0 0 0 3px var(--pasugo-glow);
+}
+
+.btn-my-loc {
+    width: 42px;
+    height: 42px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.btn-my-loc:hover {
+    border-color: var(--accent);
+    background: var(--accent-light);
+}
+
+.btn-my-loc:active {
+    transform: scale(0.92);
+}
+
+.btn-my-loc.pasugo-accent {
+    color: var(--pasugo-color);
+}
+
+.btn-my-loc.pasugo-accent:hover {
+    border-color: var(--pasugo-color);
+    background: var(--pasugo-light);
+}
+
+
+/* ==========  8. Search Suggestions  ========== */
+
+.search-suggestions {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    max-height: 160px;
+    overflow-y: auto;
+    box-shadow: var(--shadow-sm);
+}
+
+.search-suggestions::-webkit-scrollbar {
+    display: none;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: var(--surface-dim);
+}
+
+.suggestion-item:active {
+    background: var(--border-light);
+}
+
+.suggestion-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-xs);
+    background: var(--surface-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.suggestion-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.suggestion-sub {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+
+/* ==========  8a. Pasugo Info Card  ========== */
+
+.pasugo-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    background: var(--pasugo-light);
+    border: 1.5px solid rgba(108, 92, 231, 0.15);
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+}
+
+.pasugo-info-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.pasugo-info-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.pasugo-info-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--pasugo-color);
+    letter-spacing: -0.2px;
+    margin-bottom: 4px;
+}
+
+.pasugo-info-desc {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+
+/* ==========  9. Find Riders Button  ========== */
+
+.btn-find-rider {
+    width: 100%;
+    padding: 16px 24px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.25s var(--ease-spring);
+    -webkit-tap-highlight-color: transparent;
+    background: linear-gradient(135deg, var(--primary), #FF3D00);
+    color: var(--text-inverse);
+    box-shadow: 0 8px 32px var(--primary-glow);
+    letter-spacing: -0.2px;
+}
+
+.btn-find-rider:hover {
+    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-find-rider:active {
+    transform: scale(0.97);
+}
+
+.btn-find-pasugo {
+    background: linear-gradient(135deg, var(--pasugo-color), #5A4BD1);
+    box-shadow: 0 8px 32px var(--pasugo-glow);
+}
+
+.btn-find-pasugo:hover {
+    box-shadow: 0 12px 40px rgba(108, 92, 231, 0.5);
+}
+
+
+/* ==========  10. Riders List Section  ========== */
+
+.riders-section {
+    padding: 0;
+    animation: fadeSlideUp 0.3s var(--ease-out);
+}
+
+.riders-section.hidden {
+    display: none;
+}
+
+.riders-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px 12px;
+}
+
+.riders-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.riders-subtitle {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 2px;
+}
+
+.rider-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--accent-light);
+    color: #059669;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+}
+
+.rider-count-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+}
+
+.btn-back-search {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-xs);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.btn-back-search:hover {
+    border-color: var(--text-tertiary);
+    background: var(--surface-dim);
+}
+
+.btn-back-search:active {
+    transform: scale(0.92);
+}
+
+.rider-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 20px;
+    max-height: 30vh;
+    -webkit-overflow-scrolling: touch;
+}
+
+.rider-list-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* ==========  11. Rider Card  ========== */
+
+.rider-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid transparent;
+    background: var(--surface-dim);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-spring);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.rider-card:hover {
+    border-color: var(--border);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.rider-card:active {
+    transform: scale(0.98);
+}
+
+.rider-card.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.rider-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--secondary), var(--secondary-mid));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.rider-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.rider-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rider-bio {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.rider-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.rider-status-badge.available {
+    background: var(--accent-light);
+    color: #059669;
+}
+
+.rider-status-badge.busy {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+
+/* ==========  12. Rider Profile Overlay  ========== */
+
+.rider-profile-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s, visibility 0.4s;
+}
+
+.rider-profile-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.profile-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 17, 35, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.profile-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: 0 0 var(--safe-bottom);
+    transform: translateY(100%);
+    transition: transform 0.5s var(--ease-out);
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.rider-profile-overlay.active .profile-sheet {
+    transform: translateY(0);
+}
+
+.profile-header {
+    text-align: center;
+    padding: 32px 24px 20px;
+}
+
+.profile-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #FF3D00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    margin: 0 auto 16px;
+    box-shadow: 0 8px 32px var(--primary-glow);
+}
+
+.profile-name {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+}
+
+.profile-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #059669;
+}
+
+.profile-status-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+}
+
+.profile-bio {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 0 24px 20px;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 16px 8px;
+    background: var(--surface-dim);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.profile-actions {
+    padding: 12px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-service {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.25s var(--ease-spring);
+    -webkit-tap-highlight-color: transparent;
+    letter-spacing: -0.2px;
+}
+
+.btn-service:active {
+    transform: scale(0.97);
+}
+
+.btn-pahatod-action {
+    background: linear-gradient(135deg, var(--primary), #FF3D00);
+    color: var(--text-inverse);
+    box-shadow: 0 8px 30px var(--primary-glow);
+}
+
+.btn-pahatod-action:hover {
+    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.45);
+}
+
+.btn-pasugo-action {
+    background: linear-gradient(135deg, var(--pasugo-color), #5A4BD1);
+    color: var(--text-inverse);
+    box-shadow: 0 8px 30px var(--pasugo-glow);
+}
+
+.btn-pasugo-action:hover {
+    box-shadow: 0 12px 40px rgba(108, 92, 231, 0.45);
+}
+
+.btn-service-icon {
+    font-size: 20px;
+}
+
+.profile-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface-dim);
+    border: 1px solid var(--border-light);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 10;
+    color: var(--text-secondary);
+}
+
+.profile-close-btn:hover {
+    background: var(--border);
+}
+
+
+/* ==========  12b. Profile Route Form (Pahatod)  ========== */
+
+.profile-route-form {
+    padding: 0 24px 28px;
+    animation: fadeSlideUp 0.3s var(--ease-out);
+}
+
+.profile-route-form.hidden {
+    display: none;
+}
+
+.profile-route-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.btn-route-back {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-xs);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-route-back:hover {
+    border-color: var(--text-tertiary);
+    background: var(--surface-dim);
+}
+
+.btn-route-back:active {
+    transform: scale(0.92);
+}
+
+.profile-route-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+}
+
+.btn-confirm-ride {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    box-shadow: 0 8px 32px var(--accent-glow);
+}
+
+.btn-confirm-ride:hover {
+    box-shadow: 0 12px 40px rgba(0, 214, 143, 0.5);
+}
+
+
+/* ==========  13. Chat Overlay  ========== */
+
+.chat-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.5s var(--ease-out);
+}
+
+.chat-overlay.active {
+    transform: translateY(0);
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-light);
+    min-height: 64px;
+    flex-shrink: 0;
+    padding-top: max(12px, var(--safe-top));
+}
+
+.chat-back-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    border-radius: 50%;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.chat-back-btn:hover {
+    background: var(--surface-dim);
+}
+
+.chat-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-header-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-header-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+.chat-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.chat-header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #FF3D00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.chat-timer {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    background: var(--primary-light);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: none;
+}
+
+.chat-timer.visible {
+    display: block;
+}
+
+/* Chat Route Banner */
+.chat-route-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--surface-dim);
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+}
+
+.route-banner-icon {
+    font-size: 20px;
+}
+
+.route-banner-type {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.route-banner-detail {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    background: var(--surface-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-body::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* ==========  14. Chat Messages  ========== */
+
+.msg-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+}
+
+.msg-group.sent {
+    align-items: flex-end;
+}
+
+.msg-group.received {
+    align-items: flex-start;
+}
+
+.msg-bubble {
+    max-width: 75%;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.45;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.msg-sent {
+    background: var(--primary);
+    color: white;
+    border-radius: 20px 20px 4px 20px;
+}
+
+.msg-received {
+    background: var(--surface);
+    color: var(--text-primary);
+    border-radius: 20px 20px 20px 4px;
+    border: 1px solid var(--border-light);
+}
+
+.msg-time {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.msg-group.sent .msg-time {
+    text-align: right;
+}
+
+.msg-system {
+    text-align: center;
+    padding: 8px 16px;
+    margin: 8px 0;
+}
+
+.msg-system-text {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    background: var(--surface);
+    padding: 6px 16px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-light);
+}
+
+
+/* ==========  15. Chat Input  ========== */
+
+.chat-input-area {
+    padding: 12px 16px;
+    padding-bottom: max(12px, var(--safe-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border-light);
+    display: none;
+    flex-shrink: 0;
+}
+
+.chat-input-area.visible {
+    display: block;
+}
+
+.chat-input-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.chat-input {
+    flex: 1;
+    background: var(--surface-dim);
+    border: 1.5px solid var(--border);
+    border-radius: 24px;
+    padding: 12px 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+    max-height: 120px;
+    min-height: 46px;
+}
+
+.chat-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.chat-input:focus {
+    border-color: var(--primary);
+}
+
+.chat-send-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.chat-send-btn:hover {
+    background: var(--primary-dark);
+}
+
+.chat-send-btn:active {
+    transform: scale(0.9);
+}
+
+.typing-indicator {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+}
+
+.typing-indicator.visible {
+    display: flex;
+}
+
+.typing-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--text-tertiary);
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+
+/* ==========  16. Map Markers  ========== */
+
+.rider-map-marker {
+    width: 44px;
+    height: 44px;
+    background: var(--surface);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: var(--shadow-lg);
+    border: 2.5px solid var(--accent);
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.rider-map-marker.busy {
+    border-color: #F59E0B;
+}
+
+.rider-map-marker::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 214, 143, 0.3);
+    animation: markerPulse 2s infinite;
+}
+
+.rider-map-marker.busy::after {
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.landmark-marker {
+    background: var(--surface);
+    padding: 6px 10px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+/* User location marker */
+.user-marker {
+    width: 20px;
+    height: 20px;
+    background: #4285F4;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4);
+    position: relative;
+}
+
+.user-marker::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: rgba(66, 133, 244, 0.15);
+    animation: userPulse 2s infinite;
+}
+
+/* Route markers (start/end pins) */
+.route-pin-start {
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+.route-pin-end {
+    width: 14px;
+    height: 14px;
+    background: var(--primary);
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px var(--primary-glow);
+}
+
+
+/* ==========  17. Empty & Loading States  ========== */
+
+.empty-state {
+    text-align: center;
+    padding: 40px 24px;
+}
+
+.empty-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+.empty-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.empty-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.shimmer {
+    background: linear-gradient(90deg, var(--surface-dim) 0%, #eef0f7 50%, var(--surface-dim) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+
+/* ==========  18. Waiting Animation  ========== */
+
+.waiting-animation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 16px;
+    flex: 1;
+}
+
+.waiting-spinner {
+    width: 56px;
+    height: 56px;
+    border: 4px solid var(--border-light);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.waiting-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.waiting-sub {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+
+/* ==========  19. Keyframe Animations  ========== */
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+@keyframes typing {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+
+    30% {
+        transform: translateY(-6px);
+        opacity: 1;
+    }
+}
+
+@keyframes markerPulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.8);
+        opacity: 0;
+    }
+}
+
+@keyframes userPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.4;
+    }
+
+    50% {
+        transform: scale(1.5);
+        opacity: 0.1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.4;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ==========  20. Responsive  ========== */
+
+@media (min-width: 768px) {
+    .service-panel {
+        max-width: 440px;
+        left: 16px;
+        right: auto;
+        bottom: 16px;
+        border-radius: var(--radius-xl);
+        max-height: 65vh;
+    }
+
+    .service-panel.collapsed {
+        transform: translateY(calc(100% - 90px));
+    }
+
+    .profile-sheet {
+        max-width: 480px;
+        margin: 0 auto;
+    }
+
+    .chat-overlay {
+        max-width: 480px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100%);
+        border-radius: var(--radius-xl);
+        top: 5vh;
+        bottom: 5vh;
+        box-shadow: var(--shadow-xl);
+    }
+
+    .chat-overlay.active {
+        transform: translateX(-50%) translateY(0);
+    }
+}

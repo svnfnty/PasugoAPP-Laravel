@@ -79,8 +79,15 @@ class RiderController extends Controller
         }
 
         try {
-            // Broadcast to Rider
-            broadcast(new \App\Events\RiderOrdered($rider->id, $client->id, $client->name, $request->service_type));
+            // Broadcast to Rider with route details
+            broadcast(new \App\Events\RiderOrdered(
+                $rider->id, 
+                $client->id, 
+                $client->name, 
+                $request->service_type,
+                $request->pickup,
+                $request->dropoff
+            ));
             return response()->json(['message' => 'Rider notified']);
         }
         catch (\Exception $e) {

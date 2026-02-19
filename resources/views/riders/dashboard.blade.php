@@ -88,14 +88,41 @@
             const card = document.createElement('div');
             card.className = 'request-card';
             card.id = 'req-' + data.clientId;
+            let routeHtml = '';
+            if (data.serviceType === 'pahatod' && data.pickup && data.dropoff) {
+                routeHtml = `
+                    <div style="margin-top: 12px; padding: 12px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid var(--primary);">
+                        <div style="margin-bottom: 8px;">
+                            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Pickup</span>
+                            <span style="font-weight: 600; color: #1e293b;">📍 ${data.pickup.name}</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; display: block;">Destination</span>
+                            <span style="font-weight: 600; color: #1e293b;">🏁 ${data.dropoff.name}</span>
+                        </div>
+                    </div>
+                `;
+            } else if (data.serviceType === 'pasugo') {
+                routeHtml = `
+                    <div style="margin-top: 12px; padding: 12px; background: #f5f3ff; border-radius: 8px; border-left: 4px solid #8b5cf6;">
+                        <span style="font-weight: 600; color: #5b21b6;">📦 Pasugo Delivery / Errand</span>
+                        <p style="font-size: 0.8rem; color: #7c3aed; margin-top: 4px;">Client needs a delivery/errand service.</p>
+                    </div>
+                `;
+            }
+
             card.innerHTML = `
-                <div class="details">
-                    <h3>New ${data.serviceType.toUpperCase()} Request</h3>
-                    <p>Client: <strong>${data.clientName}</strong></p>
+                <div class="details" style="flex: 1; margin-right: 20px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 1.2rem;">${data.serviceType === 'pasugo' ? '📦' : '🏍️'}</span>
+                        <h3 style="margin: 0;">New ${data.serviceType.toUpperCase()} Request</h3>
+                    </div>
+                    <p>Client: <strong style="color: #1e293b;">${data.clientName}</strong></p>
+                    ${routeHtml}
                 </div>
                 <div class="actions">
-                    <button class="btn btn-decline" onclick="respond(${data.clientId}, 'decline')">Decline</button>
-                    <button class="btn btn-accept" onclick="respond(${data.clientId}, 'accept')">Accept</button>
+                    <button class="btn btn-decline" onclick="respond(${data.clientId}, 'decline', '${data.serviceType}')">Decline</button>
+                    <button class="btn btn-accept" onclick="respond(${data.clientId}, 'accept', '${data.serviceType}')">Accept</button>
                 </div>
             `;
             container.prepend(card);
@@ -105,14 +132,14 @@
             }
         }
 
-        function respond(clientId, decision) {
+        function respond(clientId, decision, serviceType) {
             fetch(`/rider/clients/${clientId}/respond`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify({ decision: decision })
+                body: JSON.stringify({ decision: decision, service_type: serviceType })
             }).then(() => {
                 const card = document.getElementById('req-' + clientId);
                 if (card) card.remove();
