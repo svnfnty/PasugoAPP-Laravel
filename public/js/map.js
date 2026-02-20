@@ -864,7 +864,6 @@
             }).catch(function () { /* ignore cancel failures */ });
             isRequestPending = false;
         }
-
         // Restore service panel
         document.getElementById('service-panel').style.display = 'flex';
     }
