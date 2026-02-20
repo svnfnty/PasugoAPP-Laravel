@@ -6,14 +6,6 @@
     .stat-pill { @apply flex-1 bg-slate-50 p-4 rounded-3xl text-center border border-slate-100; }
     .action-button { @apply w-full py-4 rounded-3xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg; }
     
-    #rider-chat-body { @apply bg-[#fcfdfe] space-y-2; }
-    .msg-bubble { @apply max-w-[80%] px-5 py-3 rounded-[1.8rem] text-[14px] font-medium shadow-sm relative transition-all animate-in slide-in-from-bottom-2; }
-    .msg-rider { @apply self-end bg-gradient-to-tr from-orange-600 to-red-500 text-white rounded-tr-none shadow-orange-100; }
-    .msg-client { @apply self-start bg-white text-slate-700 rounded-tl-none border border-slate-100; }
-    .msg-tag { @apply text-[8px] font-black uppercase tracking-[0.15em] mb-1 opacity-60; }
-    .rider-tag { @apply text-right mr-3 text-orange-600; }
-    .client-tag { @apply text-left ml-3 text-slate-400; }
-
     @keyframes pulse-custom {
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.8; transform: scale(0.98); }
@@ -117,25 +109,49 @@
 
 <!-- Rider Chat Window (Full Screen Mobile) -->
 <div id="rider-chat-window" class="hidden fixed inset-0 bg-white z-[100] flex-col shadow-2xl">
-    <div class="p-6 border-b border-slate-100 flex items-center justify-between safe-top">
-        <div class="flex items-center gap-3">
-            <button onclick="closeRiderChat()" class="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-xl">←</button>
-            <div>
-                <strong id="chat-client-name" class="block leading-none text-lg">Client</strong>
-                <span class="text-[10px] font-black uppercase text-orange-500 tracking-widest mt-1 inline-block">Secure Line</span>
+    <!-- Chat Header -->
+    <div class="flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-100 min-h-[64px] shrink-0 pt-[max(12px,env(safe-area-inset-top))]">
+        <button onclick="closeRiderChat()" class="w-9 h-9 border-none bg-transparent cursor-pointer flex items-center justify-center text-orange-500 rounded-full transition-colors shrink-0 hover:bg-slate-50">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-[#FF3D00] flex items-center justify-center text-lg shrink-0 text-white">👤</div>
+        <div class="flex-1 min-w-0">
+            <div id="chat-client-name" class="text-base font-bold text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis">Client</div>
+            <div class="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Active now</span>
             </div>
         </div>
     </div>
     
-    <div class="flex-1 overflow-y-auto p-6 flex flex-col" id="rider-chat-body">
-        <div class="msg-bubble msg-rider">Mission accepted. Connecting to client secure line...</div>
+    <!-- Chat Route Banner (Optional placeholder for UI consistency) -->
+    <div class="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-100 shrink-0">
+        <div class="text-xl">📍</div>
+        <div>
+            <div class="text-xs font-bold text-orange-500 uppercase tracking-[0.5px]">Secure Line</div>
+            <div class="text-xs text-slate-500 font-medium">Mission in progress</div>
+        </div>
     </div>
 
-    <div class="p-6 border-t border-slate-50 safe-bottom">
-        <button id="order-place-btn" onclick="placeOrder()" class="w-full bg-slate-900 text-white py-4 rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] mb-4 hidden animate-urgent">FORMALIZE ORDER MISSION</button>
-        <div class="flex gap-2">
-            <input type="text" id="rider-chat-input" class="flex-1 bg-slate-100 border-none rounded-3xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500" placeholder="Type instructions...">
-            <button onclick="sendRiderMessage()" class="w-14 h-14 bg-orange-600 text-white rounded-3xl flex items-center justify-center text-xl shadow-lg shadow-orange-100">➤</button>
+    <!-- Chat Body -->
+    <div class="flex-1 overflow-y-auto px-4 py-5 bg-slate-50 flex flex-col gap-1 [&::-webkit-scrollbar]:hidden" id="rider-chat-body">
+        <div class="text-center py-2 my-2">
+            <span class="inline-block text-[11px] font-semibold text-slate-400 bg-white px-4 py-1.5 rounded-full border border-slate-100">Mission accepted. Securing line...</span>
+        </div>
+    </div>
+
+    <!-- Chat Input -->
+    <div class="px-4 py-3 bg-white border-t border-slate-100 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
+        <button id="order-place-btn" onclick="placeOrder()" class="w-full bg-slate-900 text-white py-3.5 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] mb-3 hidden animate-urgent transition-all hover:bg-slate-800 active:scale-95 shadow-lg">FORMALIZE ORDER MISSION</button>
+        <div class="flex items-end gap-2">
+            <input type="text" id="rider-chat-input" class="flex-1 bg-slate-50 border-[1.5px] border-slate-200 rounded-[24px] px-5 py-3 font-sans text-sm font-medium text-slate-900 outline-none transition-colors max-h-[120px] min-h-[46px] resize-none placeholder:text-slate-400 focus:border-orange-500 focus:bg-white" placeholder="Type a message..." autocomplete="off">
+            <button onclick="sendRiderMessage()" class="w-[46px] h-[46px] rounded-full bg-orange-500 border-none text-white cursor-pointer flex items-center justify-center transition-all shrink-0 hover:bg-[#E85D2C] active:scale-90">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
         </div>
     </div>
 </div>
@@ -242,25 +258,35 @@
     function openRiderChat(clientName) {
         document.getElementById('chat-client-name').innerText = clientName;
         document.getElementById('rider-chat-window').classList.replace('hidden', 'flex');
-        document.getElementById('rider-chat-body').innerHTML = '<div class="msg-bubble msg-rider">Mission accepted. Securing line...</div>';
+        document.getElementById('rider-chat-body').innerHTML = `
+            <div class="text-center py-2 my-2">
+                <span class="inline-block text-[11px] font-semibold text-slate-400 bg-white px-4 py-1.5 rounded-full border border-slate-100">Mission accepted. Securing line...</span>
+            </div>
+        `;
     }
 
     function appendMessage(text, type) {
         const body = document.getElementById('rider-chat-body');
-        const msgContainer = document.createElement('div');
-        msgContainer.className = 'flex flex-col mb-2 ' + (type === 'rider' ? 'items-end' : 'items-start');
         
-        const tag = document.createElement('span');
-        tag.className = 'msg-tag ' + (type === 'rider' ? 'rider-tag' : 'client-tag');
-        tag.innerText = type === 'rider' ? 'YOU' : 'CLIENT';
+        const group = document.createElement('div');
+        group.className = 'flex flex-col mb-2 ' + (type === 'rider' ? 'items-end' : 'items-start');
 
         const bubble = document.createElement('div');
-        bubble.className = 'msg-bubble ' + (type === 'rider' ? 'msg-rider' : 'msg-client');
+        bubble.className = 'max-w-[75%] px-4 py-3 text-[14px] font-medium leading-[1.45] break-words relative ' + 
+            (type === 'rider' 
+                ? 'bg-orange-500 text-white rounded-[20px] rounded-tr-[4px]' 
+                : 'bg-white text-slate-900 rounded-[20px] rounded-tl-[4px] border border-slate-200');
         bubble.innerText = text;
+
+        const time = document.createElement('div');
+        time.className = 'text-[10px] text-slate-400 mt-1 px-1 ' + (type === 'rider' ? 'text-right' : '');
+        const now = new Date();
+        time.innerText = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+        group.appendChild(bubble);
+        group.appendChild(time);
         
-        msgContainer.appendChild(tag);
-        msgContainer.appendChild(bubble);
-        body.appendChild(msgContainer);
+        body.appendChild(group);
         body.scrollTop = body.scrollHeight;
     }
 
@@ -287,7 +313,9 @@
         btn.innerText = 'UPLOADING DATA...';
 
         const lastMessage = document.getElementById('rider-chat-body').lastElementChild;
-        const details = (lastMessage && lastMessage.classList.contains('msg-client')) ? lastMessage.innerText : 'Service Entry';
+        // Search text inside bubbles since structure changed
+        const bubble = lastMessage ? lastMessage.querySelector('.bg-white') : null;
+        const details = bubble ? bubble.innerText : 'Service Entry';
 
         fetch('{{ route('rider.order.place_from_chat') }}', {
             method: 'POST',
