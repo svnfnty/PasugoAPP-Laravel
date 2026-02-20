@@ -7,6 +7,7 @@
  * (e.g., some Docker containers, Windows, or restricted hosting environments).
  */
 
+// Define all signal constants that Symfony Console and Reverb require
 if (!defined('SIGINT')) {
     define('SIGINT', 2);
 }
@@ -19,6 +20,23 @@ if (!defined('SIGTSTP')) {
     define('SIGTSTP', 20);
 }
 
+if (!defined('SIGQUIT')) {
+    define('SIGQUIT', 3);
+}
+
+if (!defined('SIGUSR1')) {
+    define('SIGUSR1', 10);
+}
+
+if (!defined('SIGUSR2')) {
+    define('SIGUSR2', 12);
+}
+
+if (!defined('SIGALRM')) {
+    define('SIGALRM', 14);
+}
+
+// Provide no-op implementations for PCNTL functions
 if (!function_exists('pcntl_signal')) {
     function pcntl_signal($signal, $handler) {
         // No-op function for environments without PCNTL
