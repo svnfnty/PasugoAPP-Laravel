@@ -20,6 +20,7 @@ class Order extends Model
         'delivery_lng',
         'details',
         'total_amount',
+        'service_fee',
         'status',
         'service_type',
     ];

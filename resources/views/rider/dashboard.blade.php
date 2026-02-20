@@ -511,10 +511,11 @@
 
     function placeOrder() {
         const amount = document.getElementById('formalize-amount').value;
+        const serviceFee = document.getElementById('formalize-service-fee').value;
         const details = document.getElementById('formalize-details').value.trim();
 
-        if (!amount) {
-            alert('Please enter the total amount');
+        if (!amount || !serviceFee) {
+            alert('Please enter both total amount and service fee');
             return;
         }
         if (!details) {
@@ -537,9 +538,11 @@
                 client_id: activeClientId, 
                 details, 
                 type: currentServiceType,
-                amount: amount
+                amount: amount,
+                service_fee: serviceFee
             })
-        }).then(r => r.json()).then(data => {
+        })
+.then(r => r.json()).then(data => {
             currentOrderId = data.order.id;
             btn.disabled = false;
             btn.innerText = currentServiceType === 'pahatod' ? 'DROP OFF COMPLETE' : 'COMPLETE DELIVERY';
@@ -595,11 +598,24 @@
         <h2 class="text-xl font-black text-slate-900 text-center mb-2">Finalize Amount</h2>
         <p class="text-slate-500 text-xs font-medium text-center mb-8 uppercase tracking-widest">Enter total cost to formalize mission</p>
         
-        <div class="relative mb-4">
-            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">₱</span>
-            <input type="number" id="formalize-amount" step="0.01" 
-                class="w-full bg-slate-50 border-none rounded-3xl pl-12 pr-8 py-5 text-2xl font-black focus:ring-2 focus:ring-orange-500 transition-all" 
-                placeholder="0.00" autofocus>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Service Fee</label>
+            <div class="relative">
+                <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">₱</span>
+                <input type="number" id="formalize-service-fee" step="0.01" 
+                    class="w-full bg-slate-50 border-none rounded-3xl pl-12 pr-8 py-4 text-xl font-black focus:ring-2 focus:ring-orange-500 transition-all" 
+                    placeholder="0.00">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Total Cost (Items + Fee)</label>
+            <div class="relative">
+                <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">₱</span>
+                <input type="number" id="formalize-amount" step="0.01" 
+                    class="w-full bg-slate-50 border-none rounded-3xl pl-12 pr-8 py-4 text-xl font-black focus:ring-2 focus:ring-orange-500 transition-all" 
+                    placeholder="0.00">
+            </div>
         </div>
 
         <div class="mb-6">

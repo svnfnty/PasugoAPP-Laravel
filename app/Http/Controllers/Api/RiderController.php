@@ -292,7 +292,8 @@ class RiderController extends Controller
             'client_id' => 'required|exists:clients,id',
             'details' => 'required|string',
             'type' => 'required|string', // 'order' or 'pahatod'
-            'amount' => 'required|numeric|min:0'
+            'amount' => 'required|numeric|min:0',
+            'service_fee' => 'required|numeric|min:0'
         ]);
 
         $rider = auth()->guard('rider')->user();
@@ -305,6 +306,7 @@ class RiderController extends Controller
             ->first();
 
         $amount = (float) $request->amount;
+        $serviceFee = (float) $request->service_fee;
 
         if ($order) {
             $order->update([
@@ -317,6 +319,7 @@ class RiderController extends Controller
                 'details' => $request->details,
                 'status' => 'accepted', // Automatically accepted since rider clicked it
                 'total_amount' => $amount,
+                'service_fee' => $serviceFee,
                 'service_type' => $request->type
             ]);
         } else {
@@ -330,6 +333,7 @@ class RiderController extends Controller
                 'status' => 'accepted',
                 'service_type' => $request->type,
                 'total_amount' => $amount,
+                'service_fee' => $serviceFee,
             ]);
         }
 
@@ -348,9 +352,10 @@ class RiderController extends Controller
 
         // Broadcast to client that the order is formally placed
         $formattedAmount = number_format($amount, 2);
+        $formattedFee = number_format($serviceFee, 2);
         $riderName = $rider->name;
         $vehicleBrand = $rider->vehicle_brand ?? 'N/A';
-        $formalizedMsg = "✅ MISSION FORMALIZED!\n\nRider Name: {$riderName}\nVehicle: {$vehicleBrand}\n\nDetails: {$request->details}\nTotal Cost: ₱{$formattedAmount}\n\nI am now proceeding with your request. Thank you!";
+        $formalizedMsg = "✅ MISSION FORMALIZED!\n\nRider Name: {$riderName}\nVehicle: {$vehicleBrand}\n\nDetails: {$request->details}\nService Fee: ₱{$formattedFee}\nTotal Cost: ₱{$formattedAmount}\n\nI am now proceeding with your request. Thank you!";
         
         // Save message
         Message::create([
