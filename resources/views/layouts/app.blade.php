@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>@yield('title', 'FETCH GINGOOG')</title>
+    <title>@yield('title', 'PasugoAPP GINGOOG')</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -28,7 +28,7 @@
 
     <nav class="glass-nav sticky top-0 z-50 p-4">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="{{ url('/') }}" class="text-2xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">FETCH</a>
+            <a href="{{ url('/') }}" class="text-2xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">PasugoAPP</a>
             <div class="flex items-center gap-3">
                 @if(Auth::guard('client')->check() || Auth::guard('rider')->check())
                     <button class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition">
@@ -61,7 +61,7 @@
     </main>
 
     <footer class="mt-auto py-10 text-center text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] safe-bottom">
-        &copy; {{ date('Y') }} FETCH GINGOOG - Fast & Reliable
+        &copy; {{ date('Y') }} PasugoAPP GINGOOG - Fast & Reliable
     </footer>
 </body>
 </html>

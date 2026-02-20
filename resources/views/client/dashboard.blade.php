@@ -10,7 +10,7 @@
 <!-- Header Section -->
 <div class="mb-10 px-2">
     <h1 class="text-3xl font-black tracking-tighter text-slate-900 leading-tight">My Profile</h1>
-    <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mt-2">Verified Fetch Client</p>
+    <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mt-2">Verified PasugoAPP Client</p>
 </div>
 
 <!-- Quick Stats -->
@@ -31,7 +31,7 @@
         <div class="absolute inset-0 bg-gradient-to-tr from-orange-600/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
         <div class="relative z-10">
             <div class="text-4xl mb-4">🚀</div>
-            <h2 class="text-xl font-black text-white tracking-tight">Express Fetch</h2>
+            <h2 class="text-xl font-black text-white tracking-tight">Express PasugoAPP</h2>
             <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Choose a rider & start ordering</p>
         </div>
     </a>
@@ -49,7 +49,7 @@
             <div class="flex justify-between items-start mb-4">
                 <div class="flex flex-col">
                     <span class="text-[10px] font-black text-slate-300 uppercase">#{{ $order->id }} • {{ $order->created_at->format('M d') }}</span>
-                    <h3 class="font-black text-slate-900 text-lg mt-1 truncate max-w-[200px]">{{ $order->details ?: 'Express Fetch' }}</h3>
+                    <h3 class="font-black text-slate-900 text-lg mt-1 truncate max-w-[200px]">{{ $order->details ?: 'Express PasugoAPP' }}</h3>
                 </div>
                 <div class="text-right">
                     <div class="font-black text-slate-900 tracking-tighter">₱{{ number_format($order->total_amount, 0) }}</div>

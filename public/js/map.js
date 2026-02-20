@@ -84,6 +84,7 @@
     let dropoffMarker = null;
     let searchTimeout = null;
     let activeServiceType = 'pahatod';
+    let isRequestPending = false;
 
     // Location data
     let locations = {
@@ -589,6 +590,14 @@
         clearInterval(countdownInterval);
         document.getElementById('chat-timer').classList.remove('visible');
 
+        if (isRequestPending && selectedRiderId) {
+            fetch('/client/riders/' + selectedRiderId + '/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN }
+            });
+            isRequestPending = false;
+        }
+
         // Restore service panel
         document.getElementById('service-panel').style.display = 'flex';
     }
@@ -599,7 +608,9 @@
     // ══════════════════════════════════════════════════════════
 
     function startService(type) {
-        if (!selectedRiderId) return;
+        if (!selectedRiderId || isRequestPending) return;
+
+        isRequestPending = true;
 
         document.getElementById('chat-waiting').style.display = 'flex';
 
@@ -646,6 +657,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN }
                 });
+                isRequestPending = false;
             }
         }, 1000);
     }
@@ -657,6 +669,7 @@
 
     echo.channel('client.' + CLIENT_ID)
         .listen('.rider.responded', function (data) {
+            isRequestPending = false;
             if (data.decision === 'accept') {
                 clearInterval(countdownInterval);
                 document.getElementById('chat-timer').classList.remove('visible');
@@ -676,6 +689,7 @@
             }
         })
         .listen('.rider.cancelled', function () {
+            isRequestPending = false;
             document.getElementById('chat-waiting').style.display = 'none';
             clearInterval(countdownInterval);
             document.getElementById('chat-timer').classList.remove('visible');

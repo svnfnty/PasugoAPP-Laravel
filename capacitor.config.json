@@ -1,0 +1,9 @@
+{
+  "appId": "com.pasugo.app",
+  "appName": "PasugoAPP",
+  "webDir": "public",
+  "server": {
+    "url": "http://localhost",
+    "cleartext": true
+  }
+}

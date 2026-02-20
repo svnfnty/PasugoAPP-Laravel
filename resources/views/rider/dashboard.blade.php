@@ -73,7 +73,7 @@
                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ $order->status }}</span>
             </div>
             
-            <h3 class="text-lg font-black leading-tight mb-4">{{ $order->details ?: 'Express Fetch' }}</h3>
+            <h3 class="text-lg font-black leading-tight mb-4">{{ $order->details ?: 'Express PasugoAPP' }}</h3>
             
             <div class="space-y-3 mb-6">
                 <div class="flex items-center gap-3">
@@ -170,6 +170,8 @@
         const list = document.getElementById('live-requests-list');
         const emptyState = list.querySelector('.bg-slate-900');
         if (emptyState && emptyState.querySelector('.animate-pulse')) emptyState.remove();
+        
+        if (document.getElementById('req-' + data.clientId)) return;
 
         const item = document.createElement('div');
         item.className = 'bg-slate-900 rounded-[2.5rem] p-6 shadow-2xl animate-urgent border-2 border-orange-500';
@@ -305,8 +307,23 @@
         });
     }
 
-    function initRiderLocation() {
-        if (navigator.geolocation) {
+    async function initRiderLocation() {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { Geolocation } = Capacitor.Plugins;
+            try {
+                await Geolocation.requestPermissions();
+                await Geolocation.watchPosition({
+                    enableHighAccuracy: true,
+                    timeout: 10000
+                }, (position, err) => {
+                    if (position) {
+                        updateLocationOnServer(position.coords.latitude, position.coords.longitude);
+                    }
+                });
+            } catch (e) {
+                console.error('Native GPS Error', e);
+            }
+        } else if (navigator.geolocation) {
             navigator.geolocation.watchPosition(p => updateLocationOnServer(p.coords.latitude, p.coords.longitude), 
             null, { enableHighAccuracy: true });
         }

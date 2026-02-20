@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
-    <title>FETCH — Ride & Deliver</title>
+    <title>PasugoAPP — Ride & Deliver</title>
     <meta name="description" content="Book rides and delivery services in Gingoog City with Pahatod and Pasugo">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -37,7 +37,7 @@
             </svg>
         </a>
         <div class="logo-pill">
-            <span class="logo-text">FETCH DELIVERY</span>
+            <span class="logo-text">PasugoAPP</span>
         </div>
         <button class="btn-locate" id="btn-locate" onclick="window._pasugo.locateMe()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"

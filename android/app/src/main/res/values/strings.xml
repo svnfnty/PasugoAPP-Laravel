@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PasugoAPP</string>
+    <string name="title_activity_main">PasugoAPP</string>
+    <string name="package_name">com.pasugo.app</string>
+    <string name="custom_url_scheme">com.pasugo.app</string>
+</resources>

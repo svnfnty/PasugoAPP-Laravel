@@ -11,7 +11,7 @@
         <div class="inline-block px-4 py-1.5 bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-[0.3em] rounded-full mb-6 border border-orange-100">Gingoog City Express</div>
         <h1 class="text-7xl font-black text-slate-900 tracking-tighter leading-none mb-6">
             Anything.<br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">Fetched.</span>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">PasugoAPP.</span>
         </h1>
         <p class="text-slate-400 font-bold text-sm max-w-xs mx-auto leading-relaxed uppercase tracking-wider">The most elite on-demand delivery network in the city.</p>
     </div>
