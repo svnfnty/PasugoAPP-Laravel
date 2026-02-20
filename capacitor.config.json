@@ -3,7 +3,7 @@
   "appName": "PasugoAPP",
   "webDir": "public",
   "server": {
-    "url": "http://localhost",
+    "url": "https://pasugoapp-laravel-staging.up.railway.app/",
     "cleartext": true
   }
 }
