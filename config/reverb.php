@@ -1,5 +1,8 @@
 <?php
 
+// Bootstrap for environments without PCNTL extension
+require_once __DIR__ . '/reverb_bootstrap.php';
+
 return [
 
     /*
