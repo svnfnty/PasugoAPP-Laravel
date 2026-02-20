@@ -14,7 +14,7 @@
 
     // ── Read server data from <body> data attributes ──────────
     const body = document.body;
-    const REVERB_KEY = body.dataset.reverbKey;    
+    const REVERB_KEY = body.dataset.reverbKey;
     const REVERB_HOST = body.dataset.reverbHost;
     const REVERB_PORT = body.dataset.reverbPort;
     const CSRF_TOKEN = body.dataset.csrf;
@@ -25,13 +25,13 @@
     const isSecure = window.location.protocol === 'https:' || REVERB_HOST.includes('railway.app');
     const wsPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8080);
     const wssPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8080);
-    
+
     // Connection state management
     let connectionState = 'connecting';
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 10;
     const reconnectDelay = 2000; // Start with 2 seconds
-    
+
     const echo = new Echo({
         broadcaster: 'reverb',
         key: REVERB_KEY,
@@ -49,10 +49,10 @@
     function updateConnectionStatus(status, message) {
         connectionState = status;
         console.log(`[WebSocket] ${status}: ${message}`);
-        
+
         // Dispatch custom event for UI updates
-        window.dispatchEvent(new CustomEvent('websocket-status', { 
-            detail: { status, message } 
+        window.dispatchEvent(new CustomEvent('websocket-status', {
+            detail: { status, message }
         }));
     }
 
@@ -60,13 +60,13 @@
     function handleConnectionError(error) {
         console.error('[WebSocket] Connection error:', error);
         updateConnectionStatus('error', 'Connection failed, attempting to reconnect...');
-        
+
         if (reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
             const delay = Math.min(reconnectDelay * Math.pow(1.5, reconnectAttempts - 1), 30000); // Max 30s delay
-            
+
             console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
-            
+
             setTimeout(() => {
                 // Reconnect logic - Echo handles this automatically, but we monitor it
                 updateConnectionStatus('reconnecting', `Attempt ${reconnectAttempts}...`);
@@ -104,7 +104,7 @@
     );
 
     const satelliteLayer = L.tileLayer(
-        'http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
+        'https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
         { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '© Google Maps' }
     );
 
@@ -127,6 +127,85 @@
     }, null, { position: 'topright' }).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Force Leaflet to re-measure the container after the page fully renders.
+    // This fixes blank/grey map tiles on Android WebView and Capacitor.
+    setTimeout(function () { map.invalidateSize(); }, 100);
+    setTimeout(function () { map.invalidateSize(); }, 500);
+    window.addEventListener('resize', function () { map.invalidateSize(); });
+
+    // Additional fix for Capacitor: when the WebView finishes loading
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(function () { map.invalidateSize(); }, 300);
+    });
+
+
+    // ══════════════════════════════════════════════════════════
+    //  INITIAL RIDER FETCH
+    // ══════════════════════════════════════════════════════════
+
+    function fetchInitialRiders() {
+        fetch('/api/riders')
+            .then(r => r.json())
+            .then(riders => {
+                riders.forEach(rider => {
+                    if (rider.status !== 'offline' && rider.lat && rider.lng) {
+                        updateOrAddRiderMarker(rider);
+                    }
+                });
+                updateRiderList();
+            })
+            .catch(err => console.error('[Map] Failed to fetch initial riders:', err));
+    }
+
+    function updateOrAddRiderMarker(data) {
+        var pos = [data.lat, data.lng];
+
+        if (!riderMarkers[data.id || data.riderId]) {
+            var statusClass = data.status === 'available' ? '' : 'busy';
+            var marker = L.marker(pos, {
+                icon: L.divIcon({
+                    html: '<div class="rider-map-marker ' + statusClass + '">🛵</div>',
+                    className: '',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                })
+            }).addTo(map);
+
+            marker.on('click', function () { openRiderProfile(data.id || data.riderId); });
+            riderMarkers[data.id || data.riderId] = {
+                marker: marker,
+                data: {
+                    riderId: data.id || data.riderId,
+                    name: data.name,
+                    bio: data.bio,
+                    lat: data.lat,
+                    lng: data.lng,
+                    status: data.status,
+                    trips: data.trips,
+                    rating: data.rating
+                }
+            };
+        } else {
+            const id = data.id || data.riderId;
+            riderMarkers[id].marker.setLatLng(pos);
+            // Re-apply status class if changed
+            const statusClass = data.status === 'available' ? '' : 'busy';
+            const markerDiv = riderMarkers[id].marker.getElement();
+            if (markerDiv) {
+                const innerDiv = markerDiv.querySelector('.rider-map-marker');
+                if (innerDiv) {
+                    innerDiv.className = 'rider-map-marker ' + statusClass;
+                }
+            }
+            // Update stored data
+            riderMarkers[id].data = Object.assign(riderMarkers[id].data, data);
+            riderMarkers[id].data.riderId = id;
+        }
+    }
+
+    // Call fetch on load
+    fetchInitialRiders();
 
 
     // ══════════════════════════════════════════════════════════
@@ -265,35 +344,72 @@
     // ══════════════════════════════════════════════════════════
 
     function locateMe() {
-        if (!('geolocation' in navigator)) return;
+        // Try Capacitor's native geolocation first (Android/iOS)
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+            try {
+                var Geolocation = window.Capacitor.Plugins.Geolocation;
+                if (Geolocation) {
+                    Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 })
+                        .then(function (pos) {
+                            setUserPosition(pos.coords.latitude, pos.coords.longitude);
+                        })
+                        .catch(function (err) {
+                            console.warn('[Capacitor Geo] Failed, falling back to browser:', err);
+                            browserGeolocate();
+                        });
+                    return;
+                }
+            } catch (e) {
+                console.warn('[Capacitor Geo] Plugin not available, using browser API');
+            }
+        }
+
+        browserGeolocate();
+    }
+
+    function browserGeolocate() {
+        if (!('geolocation' in navigator)) {
+            console.warn('[Geo] Geolocation not supported by this browser');
+            return;
+        }
 
         navigator.geolocation.getCurrentPosition(
             function (pos) {
-                userLatLng = [pos.coords.latitude, pos.coords.longitude];
-                map.flyTo(userLatLng, 16, { duration: 0.8 });
-
-                if (userMarker) {
-                    userMarker.setLatLng(userLatLng);
-                } else {
-                    userMarker = L.marker(userLatLng, {
-                        icon: L.divIcon({
-                            html: '<div class="user-marker"></div>',
-                            className: '',
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 10]
-                        })
-                    }).addTo(map).bindTooltip('You are here', { direction: 'top', offset: [0, -14] });
-                }
+                setUserPosition(pos.coords.latitude, pos.coords.longitude);
             },
             function (err) {
-                console.error('Location error:', err);
+                console.error('[Geo] Location error:', err.message);
+                showToast('Unable to get your location. Please enable GPS.', 'info', 4000);
             },
-            { enableHighAccuracy: true, timeout: 8000 }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
         );
+    }
+
+    function setUserPosition(lat, lng) {
+        userLatLng = [lat, lng];
+        map.flyTo(userLatLng, 16, { duration: 0.8 });
+
+        if (userMarker) {
+            userMarker.setLatLng(userLatLng);
+        } else {
+            userMarker = L.marker(userLatLng, {
+                icon: L.divIcon({
+                    html: '<div class="user-marker"></div>',
+                    className: '',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(map).bindTooltip('You are here', { direction: 'top', offset: [0, -14] });
+        }
     }
 
     // Auto-locate on load
     locateMe();
+
+    // Periodically re-fetch riders as a fallback (every 30s)
+    setInterval(function () {
+        fetchInitialRiders();
+    }, 30000);
 
 
     // ══════════════════════════════════════════════════════════
@@ -526,12 +642,12 @@
         try {
             const channel = echo.channel(channelName);
             channel.listen(eventName, callback);
-            
+
             // Monitor subscription errors
             channel.error((error) => {
                 console.error(`[WebSocket] Channel ${channelName} error:`, error);
             });
-            
+
             return channel;
         } catch (error) {
             console.error(`[WebSocket] Failed to subscribe to ${channelName}:`, error);
@@ -549,26 +665,7 @@
             return;
         }
 
-        var pos = [data.lat, data.lng];
-
-        if (!riderMarkers[data.riderId]) {
-            var statusClass = data.status === 'available' ? '' : 'busy';
-            var marker = L.marker(pos, {
-                icon: L.divIcon({
-                    html: '<div class="rider-map-marker ' + statusClass + '">🛵</div>',
-                    className: '',
-                    iconSize: [44, 44],
-                    iconAnchor: [22, 22]
-                })
-            }).addTo(map);
-
-            marker.on('click', function () { openRiderProfile(data.riderId); });
-            riderMarkers[data.riderId] = { marker: marker, data: data };
-        } else {
-            riderMarkers[data.riderId].marker.setLatLng(pos);
-            riderMarkers[data.riderId].data = data;
-        }
-
+        updateOrAddRiderMarker(data);
         updateRiderList();
     });
 
@@ -871,33 +968,33 @@
     // ══════════════════════════════════════════════════════════
 
     safeChannelSubscribe('client.' + CLIENT_ID, '.rider.responded', function (data) {
-            isRequestPending = false;
-            if (data.decision === 'accept') {
-                clearInterval(countdownInterval);
-                document.getElementById('chat-timer').classList.remove('visible');
-                document.getElementById('chat-waiting').style.display = 'none';
-                document.getElementById('chat-input-area').classList.add('visible');
+        isRequestPending = false;
+        if (data.decision === 'accept') {
+            clearInterval(countdownInterval);
+            document.getElementById('chat-timer').classList.remove('visible');
+            document.getElementById('chat-waiting').style.display = 'none';
+            document.getElementById('chat-input-area').classList.add('visible');
 
-                appendSystemMessage('✅ Rider accepted your request!');
-                appendMessage('Hey! I accepted your request. Let me know the details.', 'received');
+            appendSystemMessage('✅ Rider accepted your request!');
+            appendMessage('Hey! I accepted your request. Let me know the details.', 'received');
 
-                setTimeout(function () { document.getElementById('chat-input').focus(); }, 400);
-            } else {
-                document.getElementById('chat-waiting').style.display = 'none';
-                clearInterval(countdownInterval);
-                document.getElementById('chat-timer').classList.remove('visible');
-                appendSystemMessage('❌ Rider declined');
-                appendMessage('The rider is currently unavailable. Please try another rider.', 'received');
-            }
-    });
-
-    safeChannelSubscribe('client.' + CLIENT_ID, '.rider.cancelled', function () {
-            isRequestPending = false;
+            setTimeout(function () { document.getElementById('chat-input').focus(); }, 400);
+        } else {
             document.getElementById('chat-waiting').style.display = 'none';
             clearInterval(countdownInterval);
             document.getElementById('chat-timer').classList.remove('visible');
-            appendSystemMessage('🚫 Request cancelled');
-        });
+            appendSystemMessage('❌ Rider declined');
+            appendMessage('The rider is currently unavailable. Please try another rider.', 'received');
+        }
+    });
+
+    safeChannelSubscribe('client.' + CLIENT_ID, '.rider.cancelled', function () {
+        isRequestPending = false;
+        document.getElementById('chat-waiting').style.display = 'none';
+        clearInterval(countdownInterval);
+        document.getElementById('chat-timer').classList.remove('visible');
+        appendSystemMessage('🚫 Request cancelled');
+    });
 
 
     // ══════════════════════════════════════════════════════════
@@ -905,17 +1002,17 @@
     // ══════════════════════════════════════════════════════════
 
     safeChannelSubscribe('chat.client.' + CLIENT_ID, '.message.sent', function (data) {
-            if (data.senderType === 'rider' && selectedRiderId == data.senderId) {
-                appendMessage(data.message, 'received');
+        if (data.senderType === 'rider' && selectedRiderId == data.senderId) {
+            appendMessage(data.message, 'received');
 
-                // If mission completed, reload to clear active states
-                if (data.message.indexOf('🏁 MISSION COMPLETED') !== -1) {
-                    setTimeout(function () {
-                        location.reload();
-                    }, 3000);
-                }
+            // If mission completed, reload to clear active states
+            if (data.message.indexOf('🏁 MISSION COMPLETED') !== -1) {
+                setTimeout(function () {
+                    location.reload();
+                }, 3000);
             }
-        });
+        }
+    });
 
 
     // ══════════════════════════════════════════════════════════

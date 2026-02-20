@@ -5,5 +5,16 @@
   "server": {
     "url": "https://pasugoapp-laravel-staging.up.railway.app/",
     "cleartext": true
+  },
+  "plugins": {
+    "Geolocation": {
+      "permissions": [
+        "location",
+        "coarseLocation"
+      ]
+    }
+  },
+  "android": {
+    "allowMixedContent": true
   }
 }

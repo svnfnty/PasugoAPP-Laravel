@@ -658,16 +658,41 @@
     }
 
     async function initRiderLocation() {
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { Geolocation } = Capacitor.Plugins;
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
             try {
-                await Geolocation.requestPermissions();
-                await Geolocation.watchPosition({ enableHighAccuracy: true, timeout: 10000 }, (position, err) => {
-                    if (position) updateLocationOnServer(position.coords.latitude, position.coords.longitude);
-                });
-            } catch (e) { console.error('Native GPS Error', e); }
-        } else if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(p => updateLocationOnServer(p.coords.latitude, p.coords.longitude), null, { enableHighAccuracy: true });
+                const Geolocation = window.Capacitor.Plugins.Geolocation;
+                if (Geolocation) {
+                    const permResult = await Geolocation.requestPermissions();
+                    console.log('[Rider Geo] Permission result:', permResult);
+
+                    await Geolocation.watchPosition(
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+                        (position, err) => {
+                            if (err) {
+                                console.error('[Rider Geo] Watch error:', err);
+                                return;
+                            }
+                            if (position) {
+                                updateLocationOnServer(position.coords.latitude, position.coords.longitude);
+                            }
+                        }
+                    );
+                    return; // Native plugin active, don't fall through
+                }
+            } catch (e) {
+                console.warn('[Rider Geo] Native GPS fallback to browser:', e.message || e);
+            }
+        }
+
+        // Browser fallback
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                p => updateLocationOnServer(p.coords.latitude, p.coords.longitude),
+                err => console.error('[Rider Geo] Browser geolocation error:', err.message),
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+            );
+        } else {
+            console.warn('[Rider Geo] Geolocation not supported');
         }
     }
 

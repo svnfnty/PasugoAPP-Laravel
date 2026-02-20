@@ -102,16 +102,22 @@ body {
     background: var(--secondary);
     height: 100vh;
     height: 100dvh;
+    height: -webkit-fill-available;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
 }
 
 #map {
     flex: 1;
     z-index: 1;
+    width: 100%;
+    min-height: 300px;
+    position: relative;
 }
 
 
