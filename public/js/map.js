@@ -15,10 +15,13 @@
     // ── Read server data from <body> data attributes ──────────
     const body = document.body;
     const REVERB_KEY = body.dataset.reverbKey;
-    const REVERB_HOST = body.dataset.reverbHost;
+    const REVERB_HOST_RAW = body.dataset.reverbHost;
     const REVERB_PORT = body.dataset.reverbPort;
     const CSRF_TOKEN = body.dataset.csrf;
     const CLIENT_ID = body.dataset.clientId || 'guest';
+
+    // Strip protocol from host if present (e.g., "https://host" -> "host")
+    const REVERB_HOST = REVERB_HOST_RAW ? REVERB_HOST_RAW.replace(/^https?:\/\//, '') : 'localhost';
 
     // ── Echo / Reverb setup ──────────────────────────────────
     const echo = new Echo({
