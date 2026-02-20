@@ -124,17 +124,31 @@ class RiderController extends Controller
 
             // If rider accepts, create a mission order to keep them connected
             if ($request->decision === 'accept') {
+                $pickup = $request->get('pickup');
+                $dropoff = $request->get('dropoff');
+
+                $pickupAddress = 'Awaiting Formalization';
+                $deliveryAddress = 'Awaiting Formalization';
+
+                if ($serviceType === 'pahatod' && $pickup && $dropoff) {
+                    $pickupAddress = is_array($pickup) ? ($pickup['name'] ?? 'Pickup') : $pickup;
+                    $deliveryAddress = is_array($dropoff) ? ($dropoff['name'] ?? 'Dropoff') : $dropoff;
+                }
+
                 $order = Order::create([
                     'client_id' => $clientId,
                     'rider_id' => $rider->id,
-                    'pickup_address' => 'Awaiting Formalization',
-                    'delivery_address' => 'Awaiting Formalization',
+                    'pickup_address' => $pickupAddress,
+                    'delivery_address' => $deliveryAddress,
                     'status' => 'mission_accepted',
-                    'details' => 'Mission accepted, negotiating details...'
+                    'service_type' => $serviceType,
+                    'details' => $serviceType === 'pahatod' ? "Pahatod: {$pickupAddress} to {$deliveryAddress}" : 'Mission accepted, negotiating details...'
                 ]);
 
                 $greeting = "Hello! This is {$rider->name}. What is your order for today?";
-                if ($serviceType !== 'order') {
+                if ($serviceType === 'pahatod') {
+                    $greeting = "Hello! This is {$rider->name}. I have accepted your Pahatod request from {$pickupAddress} to {$deliveryAddress}. I'm on my way!";
+                } elseif ($serviceType === 'pasugo') {
                     $greeting = "Hello! This is {$rider->name}. I have accepted your pasugo request. Please send me the details.";
                 }
 
@@ -257,11 +271,16 @@ class RiderController extends Controller
 
         if ($order) {
             $order->update([
-                'pickup_address' => $request->type === 'order' ? 'Store/Restaurant' : 'Client Location',
-                'delivery_address' => 'Gingoog City Destination',
+                'pickup_address' => $order->pickup_address === 'Awaiting Formalization' 
+                    ? ($request->type === 'order' ? 'Store/Restaurant' : 'Client Location')
+                    : $order->pickup_address,
+                'delivery_address' => $order->delivery_address === 'Awaiting Formalization'
+                    ? 'Gingoog City Destination'
+                    : $order->delivery_address,
                 'details' => $request->details,
                 'status' => 'accepted', // Automatically accepted since rider clicked it
                 'total_amount' => $amount,
+                'service_type' => $request->type
             ]);
         } else {
             // Fallback for safety
@@ -272,6 +291,7 @@ class RiderController extends Controller
                 'delivery_address' => 'Gingoog City Destination',
                 'details' => $request->details,
                 'status' => 'accepted',
+                'service_type' => $request->type,
                 'total_amount' => $amount,
             ]);
         }

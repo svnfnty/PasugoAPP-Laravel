@@ -21,6 +21,7 @@ class Order extends Model
         'details',
         'total_amount',
         'status',
+        'service_type',
     ];
 
     public function client()

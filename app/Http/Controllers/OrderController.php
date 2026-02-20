@@ -97,7 +97,9 @@ class OrderController extends Controller
                 ))->toOthers();
 
             // Notify client via chat
-            $completionMsg = "🏁 MISSION COMPLETED!\n\nI have successfully delivered your order. Thank you for using PasugoAPP!";
+            $completionMsg = $order->service_type === 'pahatod' 
+                ? "🏁 MISSION COMPLETED!\n\nI have successfully dropped you off at your destination. Thank you for using PasugoAPP!"
+                : "🏁 MISSION COMPLETED!\n\nI have successfully delivered your order. Thank you for using PasugoAPP!";
             
             Message::create([
                 'sender_id' => $rider->id,

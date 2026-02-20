@@ -117,12 +117,12 @@
         </div>
     </div>
     
-    <!-- Chat Route Banner (Optional placeholder for UI consistency) -->
-    <div class="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-100 shrink-0">
-        <div class="text-xl">📍</div>
+    <!-- Chat Route Banner -->
+    <div id="rider-chat-banner" class="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-100 shrink-0">
+        <div class="text-xl" id="rider-banner-icon">📍</div>
         <div>
-            <div class="text-xs font-bold text-orange-500 uppercase tracking-[0.5px]">Secure Line</div>
-            <div class="text-xs text-slate-500 font-medium">Mission in progress</div>
+            <div id="rider-banner-title" class="text-xs font-bold text-orange-500 uppercase tracking-[0.5px]">Secure Line</div>
+            <div id="rider-banner-subtitle" class="text-xs text-slate-500 font-medium">Mission in progress</div>
         </div>
     </div>
 
@@ -179,12 +179,14 @@
             const chatBtn = document.getElementById('order-place-btn');
             if (mission.status === 'mission_accepted') {
                 openRiderChat(mission.client.name);
-                chatBtn.innerText = 'FORMALIZE ORDER MISSION';
+                currentServiceType = mission.service_type || 'order';
+                chatBtn.innerText = currentServiceType === 'pahatod' ? 'FORMALIZE SERVICE' : 'FORMALIZE ORDER MISSION';
                 chatBtn.onclick = showFormalizeModal;
                 chatBtn.classList.remove('hidden');
             } else {
+                currentServiceType = mission.service_type || 'order';
                 // For formalized orders, show COMPLETE DELIVERY button
-                chatBtn.innerText = 'COMPLETE DELIVERY';
+                chatBtn.innerText = currentServiceType === 'pahatod' ? 'DROP OFF COMPLETE' : 'COMPLETE DELIVERY';
                 chatBtn.onclick = completeDeliveryFromChat;
                 chatBtn.classList.remove('hidden');
                 document.getElementById('chat-head').classList.remove('hidden');
@@ -210,6 +212,22 @@
         
         if (document.getElementById('req-' + data.clientId)) return;
 
+        let routeHtml = '';
+        if (data.serviceType === 'pahatod' && data.pickup && data.dropoff) {
+            routeHtml = `
+                <div class="space-y-2 mb-4 bg-slate-800/50 p-4 rounded-3xl border border-slate-700">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs">🏠</span>
+                        <p class="text-[10px] text-slate-300 font-bold truncate">${data.pickup.name || data.pickup}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs">📍</span>
+                        <p class="text-[10px] text-white font-black truncate">${data.dropoff.name || data.dropoff}</p>
+                    </div>
+                </div>
+            `;
+        }
+
         const item = document.createElement('div');
         item.className = 'bg-slate-900 rounded-[2.5rem] p-6 shadow-2xl animate-urgent border-2 border-orange-500';
         item.id = 'req-' + data.clientId;
@@ -221,9 +239,10 @@
                 </div>
                 <div class="bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded-full px-2 py-1">LIVE</div>
             </div>
+            ${routeHtml}
             <div class="flex gap-2">
                 <button class="flex-1 py-4 rounded-2xl bg-slate-800 text-white text-[10px] font-black uppercase" onclick="respond(${data.clientId}, 'decline', '${data.clientName}')">IGNORE</button>
-                <button class="flex-[2] py-4 rounded-2xl bg-orange-600 text-white text-[10px] font-black uppercase" onclick="respond(${data.clientId}, 'accept', '${data.clientName}', '${data.serviceType}')">ACCEPT MISSION</button>
+                <button class="flex-[2] py-4 rounded-2xl bg-orange-600 text-white text-[10px] font-black uppercase" onclick='respond(${data.clientId}, "accept", "${data.clientName}", "${data.serviceType}", ${JSON.stringify(data.pickup)}, ${JSON.stringify(data.dropoff)})'>ACCEPT MISSION</button>
             </div>
         `;
         list.prepend(item);
@@ -242,7 +261,7 @@
         }
     }
 
-    function respond(clientId, decision, clientName, serviceType = 'order') {
+    function respond(clientId, decision, clientName, serviceType = 'order', pickup = null, dropoff = null) {
         const card = document.getElementById('req-' + clientId);
         if (card) card.querySelectorAll('button').forEach(b => b.disabled = true);
 
@@ -252,7 +271,7 @@
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ decision, service_type: serviceType })
+            body: JSON.stringify({ decision, service_type: serviceType, pickup, dropoff })
         }).then(r => r.json()).then(data => {
             if (card) card.remove();
             if (decision === 'accept') {
@@ -260,8 +279,16 @@
                 currentOrderId = data.order ? data.order.id : null;
                 currentServiceType = serviceType;
                 
+                // Add to myMissions for chat banner context
+                if (data.order) {
+                    data.order.client = { name: clientName };
+                    myMissions.push(data.order);
+                }
+                
                 openRiderChat(clientName);
-                document.getElementById('order-place-btn').classList.remove('hidden');
+                const chatBtn = document.getElementById('order-place-btn');
+                chatBtn.innerText = currentServiceType === 'pahatod' ? 'FORMALIZE SERVICE' : 'FORMALIZE ORDER MISSION';
+                chatBtn.classList.remove('hidden');
                 // Show chat head if closed later
                 document.getElementById('chat-head').classList.remove('hidden');
             }
@@ -285,6 +312,22 @@
         document.getElementById('chat-client-name').innerText = clientName;
         document.getElementById('rider-chat-window').classList.replace('hidden', 'flex');
         document.getElementById('chat-head').classList.add('hidden'); // Hide chat head when window is open
+
+        // Update Banner based on current mission if available
+        const bannerTitle = document.getElementById('rider-banner-title');
+        const bannerSub = document.getElementById('rider-banner-subtitle');
+        const bannerIcon = document.getElementById('rider-banner-icon');
+
+        const mission = myMissions.find(m => m.client_id == activeClientId);
+        if (mission && (mission.service_type === 'pahatod' || mission.type === 'pahatod')) {
+             bannerIcon.innerText = '🏍️';
+             bannerTitle.innerText = 'Pahatod Ride';
+             bannerSub.innerText = `${mission.pickup_address} → ${mission.delivery_address}`;
+        } else {
+             bannerIcon.innerText = '📍';
+             bannerTitle.innerText = 'Secure Line';
+             bannerSub.innerText = 'Mission in progress';
+        }
 
         // Load Chat History
         const chatBody = document.getElementById('rider-chat-body');
@@ -354,6 +397,8 @@
     }
 
     function showFormalizeModal() {
+        const modalBtn = document.querySelector('#formalize-modal button[onclick="placeOrder()"]');
+        modalBtn.innerText = currentServiceType === 'pahatod' ? 'FORMALIZE SERVICE' : 'CONFIRM & SEND TO CLIENT';
         document.getElementById('formalize-modal').classList.replace('hidden', 'flex');
     }
 
@@ -421,12 +466,12 @@
         }).then(r => r.json()).then(data => {
             currentOrderId = data.order.id;
             btn.disabled = false;
-            btn.innerText = 'COMPLETE DELIVERY';
+            btn.innerText = currentServiceType === 'pahatod' ? 'DROP OFF COMPLETE' : 'COMPLETE DELIVERY';
             btn.onclick = completeDeliveryFromChat;
             closeFormalizeModal();
             
             // Optionally notify client that we are starting delivery
-            appendMessage('Amount confirmed! I am starting the delivery now.', 'rider');
+            appendMessage('Amount confirmed! I am starting the mission now.', 'rider');
         });
     }
 

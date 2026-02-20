@@ -505,8 +505,9 @@
             alert('Please set both pickup and dropoff locations.');
             return;
         }
-        openChatWithService('pahatod');
+        openChatWithService('pahatod', true);
     }
+
 
     function directBookRider(id) {
         var riderObj = riderMarkers[id];
@@ -540,21 +541,20 @@
     //  CHAT WINDOW
     // ══════════════════════════════════════════════════════════
 
-    function openChatWithService(type) {
+    function openChatWithService(type, fromProfile = false) {
         activeServiceType = type;
         closeProfile();
-        openChat();
-        setTimeout(function () { startService(type); }, 300);
+        openChat(fromProfile);
+        setTimeout(function () { startService(type, fromProfile); }, 300);
     }
 
-    function openChat() {
+    function openChat(fromProfile = false) {
         var chatOverlay = document.getElementById('chat-overlay');
         document.getElementById('chat-rider-name').textContent = selectedRiderName;
 
-        // Show route banner in chat ... [keeping original banner logic mostly]
+        // Show route banner in chat
         var banner = document.getElementById('chat-route-banner');
-        var isProfileRoute = !document.getElementById('profile-route-form').classList.contains('hidden');
-        var prefix = isProfileRoute ? 'profile' : 'pahatod';
+        var prefix = fromProfile ? 'profile' : 'pahatod';
         var pickup = locations[prefix + '-pickup'];
         var dropoff = locations[prefix + '-dropoff'];
 
@@ -615,7 +615,7 @@
     //  SERVICE REQUEST
     // ══════════════════════════════════════════════════════════
 
-    function startService(type) {
+    function startService(type, fromProfile = false) {
         if (!selectedRiderId || isRequestPending) return;
 
         // Prevent booking if mission is already active
@@ -635,8 +635,7 @@
         appendMessage('Waiting for rider to accept your request...', 'system');
 
         // Include route data in request (only Pahatod has it)
-        var isProfileRoute = !document.getElementById('profile-route-form').classList.contains('hidden');
-        var prefix = isProfileRoute ? 'profile' : 'pahatod';
+        var prefix = fromProfile ? 'profile' : 'pahatod';
 
         var pickup = locations[prefix + '-pickup'];
         var dropoff = locations[prefix + '-dropoff'];

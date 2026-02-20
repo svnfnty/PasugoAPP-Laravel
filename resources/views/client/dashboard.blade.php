@@ -113,11 +113,11 @@
     </div>
     
     <!-- Chat Route Banner -->
-    <div class="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-100 shrink-0">
-        <div class="text-xl">📍</div>
+    <div id="client-chat-banner" class="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-100 shrink-0">
+        <div class="text-xl" id="client-banner-icon">📍</div>
         <div>
-            <div class="text-xs font-bold text-orange-500 uppercase tracking-[0.5px]">Secure Line</div>
-            <div class="text-xs text-slate-500 font-medium">Mission in progress</div>
+            <div id="client-banner-title" class="text-xs font-bold text-orange-500 uppercase tracking-[0.5px]">Secure Line</div>
+            <div id="client-banner-subtitle" class="text-xs text-slate-500 font-medium">Mission in progress</div>
         </div>
     </div>
 
@@ -186,7 +186,14 @@
             if (data.decision === 'accept') {
                 activeRiderId = data.riderId;
                 // Store mission data for ongoing context
-                activeMission = { id: data.orderId, rider_id: data.riderId, rider: { name: data.riderName } };
+                activeMission = { 
+                    id: data.orderId, 
+                    rider_id: data.riderId, 
+                    rider: { name: data.riderName },
+                    service_type: data.serviceType,
+                    pickup_address: data.pickup ? (data.pickup.name || data.pickup) : '...',
+                    delivery_address: data.dropoff ? (data.dropoff.name || data.dropoff) : '...'
+                };
                 openClientChat(data.riderName);
             }
         });
@@ -215,6 +222,21 @@
         document.getElementById('chat-rider-name').innerText = riderName;
         document.getElementById('client-chat-window').classList.replace('hidden', 'flex');
         document.getElementById('client-chat-head').classList.add('hidden');
+
+        // Update Banner
+        const bannerTitle = document.getElementById('client-banner-title');
+        const bannerSub = document.getElementById('client-banner-subtitle');
+        const bannerIcon = document.getElementById('client-banner-icon');
+
+        if (activeMission && (activeMission.service_type === 'pahatod' || activeMission.type === 'pahatod')) {
+             bannerIcon.innerText = '🏍️';
+             bannerTitle.innerText = 'Pahatod Ride';
+             bannerSub.innerText = `${activeMission.pickup_address} → ${activeMission.delivery_address}`;
+        } else {
+             bannerIcon.innerText = '📍';
+             bannerTitle.innerText = 'Secure Line';
+             bannerSub.innerText = 'Mission in progress';
+        }
 
         // Load History
         const chatBody = document.getElementById('client-chat-body');
