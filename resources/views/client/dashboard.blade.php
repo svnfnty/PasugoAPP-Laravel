@@ -157,14 +157,24 @@
 <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
+    // WebSocket Configuration with proper protocol detection
+    const wsHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
+    const wsPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
+    
+    // Determine if we should use TLS based on the current page protocol or host
+    const isSecure = window.location.protocol === 'https:' || wsHost.includes('railway.app');
+    const port = wsPort || (isSecure ? 443 : 8080);
+
     const echo = new Echo({
         broadcaster: 'reverb',
         key: '{{ config('broadcasting.connections.reverb.key') }}',
-        wsHost: '{{ config('broadcasting.connections.reverb.options.host') }}',
-        wsPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
-        wssPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
-        forceTLS: false,
-        enabledTransports: ['ws', 'wss'],
+        wsHost: wsHost,
+        wsPort: isSecure ? 443 : port,
+        wssPort: isSecure ? 443 : port,
+        forceTLS: isSecure,
+        enabledTransports: isSecure ? ['wss'] : ['ws', 'wss'],
+        activityTimeout: 30000,
+        pongTimeout: 10000,
     });
 
     const clientId = {{ auth()->guard('client')->id() }};

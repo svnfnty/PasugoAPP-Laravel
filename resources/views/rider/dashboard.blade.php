@@ -159,8 +159,8 @@
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
     // WebSocket Configuration with proper protocol detection
-    const wsHost = '{{ config('broadcasting.connections.reverb.options.host') }}';
-    const wsPort = '{{ config('broadcasting.connections.reverb.options.port') }}';
+    const wsHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
+    const wsPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
     
     // Determine if we should use TLS based on the current page protocol or host
     const isSecure = window.location.protocol === 'https:' || wsHost.includes('railway.app');
