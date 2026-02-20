@@ -645,10 +645,15 @@
     }
 
     function updateLocationOnServer(lat, lng) {
-        fetch('{{ route('rider.location.update') }}', {
+        // Use secure URL to prevent Mixed Content errors
+        const updateUrl = '{{ secure_url(route('rider.location.update', [], false)) }}';
+        
+        fetch(updateUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             body: JSON.stringify({ lat, lng })
+        }).catch(error => {
+            console.error('[Location Update] Failed to update location:', error);
         });
     }
 
