@@ -32,12 +32,12 @@ return [
 
         'reverb' => [
             'driver' => 'reverb',
-            'key' => env('REVERB_APP_KEY', 'local-key'),
-            'secret' => env('REVERB_APP_SECRET', 'local-secret'),
-            'app_id' => env('REVERB_APP_ID', 'local-app-id'),
+            'key' => env('REVERB_APP_KEY'),
+            'secret' => env('REVERB_APP_SECRET'),
+            'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => env('REVERB_HOST', 'localhost'),
-                'port' => env('REVERB_PORT', 8080),
+                'host' => env('REVERB_HOST'),
+                'port' => env('REVERB_PORT', 443),
                 'scheme' => env('REVERB_SCHEME', 'http'),
                 'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
             ],
