@@ -49,13 +49,18 @@ class RiderController extends Controller
 
         $rider = auth()->guard('rider')->user() ?? $request->user();
 
-        if ($rider) {
-            $rider->update([
-                'lat' => $request->lat,
-                'lng' => $request->lng,
-            ]);
+        if (!$rider) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-            // Broadcast real-time location
+        // Update rider location in database
+        $rider->update([
+            'lat' => $request->lat,
+            'lng' => $request->lng,
+        ]);
+
+        // Broadcast real-time location with error handling
+        try {
             broadcast(new \App\Events\RiderLocationUpdated(
                 $rider->id,
                 $request->lat,
@@ -63,12 +68,18 @@ class RiderController extends Controller
                 $rider->status,
                 $rider->name,
                 $rider->bio
-                ))->toOthers();
-
-            return response()->json(['message' => 'Location updated and broadcasted']);
+            ))->toOthers();
+        } catch (\Exception $e) {
+            // Log the error but don't fail the request if broadcast fails
+            Log::warning('Rider location broadcast failed: ' . $e->getMessage());
         }
 
-        return response()->json(['message' => 'Unauthorized'], 401);
+        return response()->json([
+            'message' => 'Location updated',
+            'rider_id' => $rider->id,
+            'lat' => $request->lat,
+            'lng' => $request->lng
+        ]);
     }
 
     public function updateClientLocation(Request $request)
