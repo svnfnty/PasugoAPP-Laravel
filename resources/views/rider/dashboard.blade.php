@@ -158,15 +158,95 @@
 <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
-   const echo = new Echo({
+    // WebSocket Configuration with proper protocol detection
+    const wsHost = '{{ config('broadcasting.connections.reverb.options.host') }}';
+    const wsPort = '{{ config('broadcasting.connections.reverb.options.port') }}';
+    
+    // Determine if we should use TLS based on the current page protocol or host
+    const isSecure = window.location.protocol === 'https:' || wsHost.includes('railway.app');
+    const port = wsPort || (isSecure ? 443 : 8080);
+    
+    // Connection state management
+    let connectionState = 'connecting';
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 10;
+    const reconnectDelay = 2000;
+
+    const echo = new Echo({
         broadcaster: 'reverb',
         key: '{{ config('broadcasting.connections.reverb.key') }}',
-        wsHost: '{{ config('broadcasting.connections.reverb.options.host') }}',
-        wsPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
-        wssPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
-        forceTLS: false,
-        enabledTransports: ['ws', 'wss'],
+        wsHost: wsHost,
+        wsPort: isSecure ? 443 : port,
+        wssPort: isSecure ? 443 : port,
+        forceTLS: isSecure,
+        enabledTransports: isSecure ? ['wss'] : ['ws', 'wss'],
+        activityTimeout: 30000,
+        pongTimeout: 10000,
     });
+
+    // Connection status monitoring
+    function updateConnectionStatus(status, message) {
+        connectionState = status;
+        console.log(`[Rider WebSocket] ${status}: ${message}`);
+        
+        // Dispatch custom event for UI updates
+        window.dispatchEvent(new CustomEvent('rider-websocket-status', { 
+            detail: { status, message } 
+        }));
+    }
+
+    // Handle connection errors and reconnection
+    function handleConnectionError(error) {
+        console.error('[Rider WebSocket] Connection error:', error);
+        updateConnectionStatus('error', 'Connection failed, attempting to reconnect...');
+        
+        if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            const delay = Math.min(reconnectDelay * Math.pow(1.5, reconnectAttempts - 1), 30000);
+            
+            console.log(`[Rider WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+            
+            setTimeout(() => {
+                updateConnectionStatus('reconnecting', `Attempt ${reconnectAttempts}...`);
+            }, delay);
+        } else {
+            updateConnectionStatus('failed', 'Max reconnection attempts reached. Please refresh the page.');
+        }
+    }
+
+    // Monitor connection state
+    echo.connector.pusher.connection.bind('connected', () => {
+        reconnectAttempts = 0;
+        updateConnectionStatus('connected', 'WebSocket connected successfully');
+    });
+
+    echo.connector.pusher.connection.bind('disconnected', () => {
+        updateConnectionStatus('disconnected', 'WebSocket disconnected');
+    });
+
+    echo.connector.pusher.connection.bind('error', (error) => {
+        handleConnectionError(error);
+    });
+
+    // Initial connection attempt
+    updateConnectionStatus('connecting', `Connecting to ${wsHost}:${port} (TLS: ${isSecure})`);
+
+    // Safe channel subscription with error handling
+    function safeChannelSubscribe(channelName, eventName, callback) {
+        try {
+            const channel = echo.channel(channelName);
+            channel.listen(eventName, callback);
+            
+            channel.error((error) => {
+                console.error(`[Rider WebSocket] Channel ${channelName} error:`, error);
+            });
+            
+            return channel;
+        } catch (error) {
+            console.error(`[Rider WebSocket] Failed to subscribe to ${channelName}:`, error);
+            return null;
+        }
+    }
 
     const riderId = {{ $rider->id }};
     let activeClientId = null;
@@ -206,16 +286,16 @@
         }
     };
 
-    echo.channel('rider.' + riderId)
-        .listen('.rider.ordered', (data) => addRequestToUI(data))
-        .listen('.rider.cancelled', (data) => {
-            const card = document.getElementById('req-' + data.clientId);
-            if (card) {
-                card.classList.remove('animate-urgent');
-                card.innerHTML = '<p class="text-[10px] font-black text-rose-500 uppercase">Mission Expired</p>';
-                setTimeout(() => { card.remove(); checkEmptyRequests(); }, 2000);
-            }
-        });
+    safeChannelSubscribe('rider.' + riderId, '.rider.ordered', (data) => addRequestToUI(data));
+    
+    safeChannelSubscribe('rider.' + riderId, '.rider.cancelled', (data) => {
+        const card = document.getElementById('req-' + data.clientId);
+        if (card) {
+            card.classList.remove('animate-urgent');
+            card.innerHTML = '<p class="text-[10px] font-black text-rose-500 uppercase">Mission Expired</p>';
+            setTimeout(() => { card.remove(); checkEmptyRequests(); }, 2000);
+        }
+    });
 
     function addRequestToUI(data) {
         const list = document.getElementById('live-requests-list');
@@ -311,17 +391,16 @@
         });
     }
 
-    echo.channel('chat.rider.' + riderId)
-        .listen('.message.sent', (data) => {
-            if (data.senderType === 'client' && activeClientId == data.senderId) {
-                appendMessage(data.message, 'client', data.type, data.locationData);
-                // Auto-open if window is closed
-                if (document.getElementById('rider-chat-window').classList.contains('hidden')) {
-                    document.getElementById('rider-chat-window').classList.replace('hidden', 'flex');
-                    document.getElementById('chat-head').classList.add('hidden');
-                }
+    safeChannelSubscribe('chat.rider.' + riderId, '.message.sent', (data) => {
+        if (data.senderType === 'client' && activeClientId == data.senderId) {
+            appendMessage(data.message, 'client', data.type, data.locationData);
+            // Auto-open if window is closed
+            if (document.getElementById('rider-chat-window').classList.contains('hidden')) {
+                document.getElementById('rider-chat-window').classList.replace('hidden', 'flex');
+                document.getElementById('chat-head').classList.add('hidden');
             }
-        });
+        }
+    });
 
     function openRiderChat(clientName) {
         document.getElementById('chat-client-name').innerText = clientName;
@@ -361,17 +440,16 @@
             });
 
         // Listen for real-time tracking from this specific client
-        echo.channel('client.location.' + activeClientId)
-            .listen('.client.location.updated', (data) => {
-                const mapImg = document.getElementById(`map-client-${activeClientId}`);
-                const mapLink = document.getElementById(`link-client-${activeClientId}`);
-                if (mapImg) {
-                    mapImg.src = `https://static-maps.yandex.ru/1.x/?lang=en_US&ll=${data.lng},${data.lat}&z=16&l=map&size=300,150&pt=${data.lng},${data.lat},pm2rdm`;
-                }
-                if (mapLink) {
-                    mapLink.href = `https://www.google.com/maps?q=${data.lat},${data.lng}`;
-                }
-            });
+        safeChannelSubscribe('client.location.' + activeClientId, '.client.location.updated', (data) => {
+            const mapImg = document.getElementById(`map-client-${activeClientId}`);
+            const mapLink = document.getElementById(`link-client-${activeClientId}`);
+            if (mapImg) {
+                mapImg.src = `https://static-maps.yandex.ru/1.x/?lang=en_US&ll=${data.lng},${data.lat}&z=16&l=map&size=300,150&pt=${data.lng},${data.lat},pm2rdm`;
+            }
+            if (mapLink) {
+                mapLink.href = `https://www.google.com/maps?q=${data.lat},${data.lng}`;
+            }
+        });
     }
 
     function appendMessage(text, type, msgType = 'text', locationData = null) {

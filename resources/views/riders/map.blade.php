@@ -40,13 +40,20 @@
         <div class="logo-pill">
             <span class="logo-text">PasugoAPP</span>
         </div>
-        <button class="btn-locate" id="btn-locate" onclick="window._pasugo.locateMe()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
-            </svg>
-        </button>
+        <div class="flex items-center gap-2">
+            {{-- WebSocket Connection Status Indicator --}}
+            <div id="ws-status-indicator" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-100 text-xs font-medium transition-all duration-300">
+                <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span id="ws-status-text" class="text-slate-600">Connecting...</span>
+            </div>
+            <button class="btn-locate" id="btn-locate" onclick="window._pasugo.locateMe()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                </svg>
+            </button>
+        </div>
     </div>
 
 
@@ -347,6 +354,39 @@
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
     <script src="{{ secure_asset('js/map.js') }}"></script>
 
+    {{-- WebSocket Connection Status Handler --}}
+    <script>
+        (function() {
+            const statusIndicator = document.getElementById('ws-status-indicator');
+            const statusDot = document.getElementById('ws-status-dot');
+            const statusText = document.getElementById('ws-status-text');
+            
+            const statusConfig = {
+                connecting: { dot: 'bg-amber-500', text: 'Connecting...', bg: 'bg-slate-100' },
+                connected: { dot: 'bg-emerald-500', text: 'Live', bg: 'bg-emerald-50' },
+                disconnected: { dot: 'bg-rose-500', text: 'Offline', bg: 'bg-rose-50' },
+                error: { dot: 'bg-rose-500', text: 'Error', bg: 'bg-rose-50' },
+                reconnecting: { dot: 'bg-amber-500 animate-pulse', text: 'Reconnecting...', bg: 'bg-amber-50' },
+                failed: { dot: 'bg-rose-500', text: 'Failed', bg: 'bg-rose-50' }
+            };
+            
+            function updateStatus(status) {
+                const config = statusConfig[status] || statusConfig.connecting;
+                
+                statusDot.className = `w-2 h-2 rounded-full ${config.dot}`;
+                statusText.textContent = config.text;
+                statusIndicator.className = `flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${config.bg}`;
+            }
+            
+            // Listen for WebSocket status events from map.js
+            window.addEventListener('websocket-status', (event) => {
+                updateStatus(event.detail.status);
+            });
+            
+            // Initial state
+            updateStatus('connecting');
+        })();
+    </script>
 
 </body>
 </html>

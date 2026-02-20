@@ -21,15 +21,77 @@
     const CLIENT_ID = body.dataset.clientId || 'guest';
 
     // ── Echo / Reverb setup ──────────────────────────────────
+    // Determine if we should use TLS based on the current page protocol or host
+    const isSecure = window.location.protocol === 'https:' || REVERB_HOST.includes('railway.app');
+    const wsPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8080);
+    const wssPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8080);
+    
+    // Connection state management
+    let connectionState = 'connecting';
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 10;
+    const reconnectDelay = 2000; // Start with 2 seconds
+    
     const echo = new Echo({
         broadcaster: 'reverb',
         key: REVERB_KEY,
         wsHost: REVERB_HOST,
-        wsPort: REVERB_PORT,
-        wssPort: REVERB_PORT,
-        forceTLS: false,
-        enabledTransports: ['ws', 'wss'],
+        wsPort: wsPort,
+        wssPort: wssPort,
+        forceTLS: isSecure,
+        enabledTransports: isSecure ? ['wss'] : ['ws', 'wss'],
+        // Add connection timeout and activity timeout
+        activityTimeout: 30000,
+        pongTimeout: 10000,
     });
+
+    // Connection status monitoring
+    function updateConnectionStatus(status, message) {
+        connectionState = status;
+        console.log(`[WebSocket] ${status}: ${message}`);
+        
+        // Dispatch custom event for UI updates
+        window.dispatchEvent(new CustomEvent('websocket-status', { 
+            detail: { status, message } 
+        }));
+    }
+
+    // Handle connection errors and reconnection
+    function handleConnectionError(error) {
+        console.error('[WebSocket] Connection error:', error);
+        updateConnectionStatus('error', 'Connection failed, attempting to reconnect...');
+        
+        if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            const delay = Math.min(reconnectDelay * Math.pow(1.5, reconnectAttempts - 1), 30000); // Max 30s delay
+            
+            console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+            
+            setTimeout(() => {
+                // Reconnect logic - Echo handles this automatically, but we monitor it
+                updateConnectionStatus('reconnecting', `Attempt ${reconnectAttempts}...`);
+            }, delay);
+        } else {
+            updateConnectionStatus('failed', 'Max reconnection attempts reached. Please refresh the page.');
+        }
+    }
+
+    // Monitor connection state
+    echo.connector.pusher.connection.bind('connected', () => {
+        reconnectAttempts = 0;
+        updateConnectionStatus('connected', 'WebSocket connected successfully');
+    });
+
+    echo.connector.pusher.connection.bind('disconnected', () => {
+        updateConnectionStatus('disconnected', 'WebSocket disconnected');
+    });
+
+    echo.connector.pusher.connection.bind('error', (error) => {
+        handleConnectionError(error);
+    });
+
+    // Initial connection attempt
+    updateConnectionStatus('connecting', `Connecting to ${REVERB_HOST}:${isSecure ? wssPort : wsPort} (TLS: ${isSecure})`);
 
 
     // ══════════════════════════════════════════════════════════
@@ -459,7 +521,25 @@
     //  RIDER LOCATION SYNC (real-time)
     // ══════════════════════════════════════════════════════════
 
-    echo.channel('riders').listen('.rider.location.updated', function (data) {
+    // Safe channel subscription with error handling
+    function safeChannelSubscribe(channelName, eventName, callback) {
+        try {
+            const channel = echo.channel(channelName);
+            channel.listen(eventName, callback);
+            
+            // Monitor subscription errors
+            channel.error((error) => {
+                console.error(`[WebSocket] Channel ${channelName} error:`, error);
+            });
+            
+            return channel;
+        } catch (error) {
+            console.error(`[WebSocket] Failed to subscribe to ${channelName}:`, error);
+            return null;
+        }
+    }
+
+    safeChannelSubscribe('riders', '.rider.location.updated', function (data) {
         if (data.status === 'offline') {
             if (riderMarkers[data.riderId]) {
                 map.removeLayer(riderMarkers[data.riderId].marker);
@@ -790,8 +870,7 @@
     //  RIDER RESPONSE LISTENER
     // ══════════════════════════════════════════════════════════
 
-    echo.channel('client.' + CLIENT_ID)
-        .listen('.rider.responded', function (data) {
+    safeChannelSubscribe('client.' + CLIENT_ID, '.rider.responded', function (data) {
             isRequestPending = false;
             if (data.decision === 'accept') {
                 clearInterval(countdownInterval);
@@ -810,8 +889,9 @@
                 appendSystemMessage('❌ Rider declined');
                 appendMessage('The rider is currently unavailable. Please try another rider.', 'received');
             }
-        })
-        .listen('.rider.cancelled', function () {
+    });
+
+    safeChannelSubscribe('client.' + CLIENT_ID, '.rider.cancelled', function () {
             isRequestPending = false;
             document.getElementById('chat-waiting').style.display = 'none';
             clearInterval(countdownInterval);
@@ -824,8 +904,7 @@
     //  INCOMING MESSAGES
     // ══════════════════════════════════════════════════════════
 
-    echo.channel('chat.client.' + CLIENT_ID)
-        .listen('.message.sent', function (data) {
+    safeChannelSubscribe('chat.client.' + CLIENT_ID, '.message.sent', function (data) {
             if (data.senderType === 'rider' && selectedRiderId == data.senderId) {
                 appendMessage(data.message, 'received');
 
