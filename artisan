@@ -1,8 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-// Bootstrap for environments without PCNTL extension (must be loaded before Symfony Console)
-require __DIR__.'/config/reverb_bootstrap.php';
 
 use Illuminate\Foundation\Application;
 use Symfony\Component\Console\Input\ArgvInput;

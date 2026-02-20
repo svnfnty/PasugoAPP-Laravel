@@ -1,8 +1,5 @@
 <?php
 
-// Bootstrap for environments without PCNTL extension (must be loaded before Symfony Console)
-require_once __DIR__ . '/../config/reverb_bootstrap.php';
-
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
