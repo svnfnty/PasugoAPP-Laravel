@@ -49,6 +49,7 @@ class RiderAuthController extends Controller
             'phone' => 'required|string|max:20|unique:riders',
             'password' => 'required|string|min:8|confirmed',
             'vehicle_type' => 'required|string',
+            'vehicle_brand' => 'required|string|max:255',
         ]);
 
         $rider = Rider::create([
@@ -57,6 +58,7 @@ class RiderAuthController extends Controller
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
             'vehicle_type' => $request->vehicle_type,
+            'vehicle_brand' => $request->vehicle_brand,
             'status' => 'available', // Default to available
         ]);
 

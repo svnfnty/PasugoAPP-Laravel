@@ -311,7 +311,9 @@ class RiderController extends Controller
 
         // Broadcast to client that the order is formally placed
         $formattedAmount = number_format($amount, 2);
-        $formalizedMsg = "✅ MISSION FORMALIZED!\n\nDetails: {$request->details}\nTotal Cost: ₱{$formattedAmount}\n\nI am now proceeding with your request. Thank you!";
+        $riderName = $rider->name;
+        $vehicleBrand = $rider->vehicle_brand ?? 'N/A';
+        $formalizedMsg = "✅ MISSION FORMALIZED!\n\nRider Name: {$riderName}\nVehicle: {$vehicleBrand}\n\nDetails: {$request->details}\nTotal Cost: ₱{$formattedAmount}\n\nI am now proceeding with your request. Thank you!";
         
         // Save message
         Message::create([

@@ -399,6 +399,12 @@
     function showFormalizeModal() {
         const modalBtn = document.querySelector('#formalize-modal button[onclick="placeOrder()"]');
         modalBtn.innerText = currentServiceType === 'pahatod' ? 'FORMALIZE SERVICE' : 'CONFIRM & SEND TO CLIENT';
+        
+        // Pre-fill details from last client message or mission details
+        const bubbles = document.querySelectorAll('#rider-chat-body .bg-white');
+        const lastMsg = bubbles.length > 0 ? bubbles[bubbles.length - 1].innerText : '';
+        document.getElementById('formalize-details').value = lastMsg || (currentServiceType === 'pahatod' ? 'Pahatod Ride Service' : 'Express Pasugo Delivery');
+
         document.getElementById('formalize-modal').classList.replace('hidden', 'flex');
     }
 
@@ -437,8 +443,14 @@
 
     function placeOrder() {
         const amount = document.getElementById('formalize-amount').value;
+        const details = document.getElementById('formalize-details').value.trim();
+
         if (!amount) {
             alert('Please enter the total amount');
+            return;
+        }
+        if (!details) {
+            alert('Please enter mission details');
             return;
         }
 
@@ -449,10 +461,6 @@
         btn.disabled = true;
         modalBtn.disabled = true;
         modalBtn.innerText = 'PROCESSING...';
-
-        // Get details from last client message or default
-        const bubbles = document.querySelectorAll('#rider-chat-body .bg-white');
-        const details = bubbles.length > 0 ? bubbles[bubbles.length - 1].innerText : 'Service Entry';
 
         fetch('{{ route('rider.order.place_from_chat') }}', {
             method: 'POST',
@@ -519,11 +527,18 @@
         <h2 class="text-xl font-black text-slate-900 text-center mb-2">Finalize Amount</h2>
         <p class="text-slate-500 text-xs font-medium text-center mb-8 uppercase tracking-widest">Enter total cost to formalize mission</p>
         
-        <div class="relative mb-6">
+        <div class="relative mb-4">
             <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">₱</span>
             <input type="number" id="formalize-amount" step="0.01" 
                 class="w-full bg-slate-50 border-none rounded-3xl pl-12 pr-8 py-5 text-2xl font-black focus:ring-2 focus:ring-orange-500 transition-all" 
                 placeholder="0.00" autofocus>
+        </div>
+
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Mission Details</label>
+            <textarea id="formalize-details" rows="3" 
+                class="w-full bg-slate-50 border-none rounded-3xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500 transition-all resize-none" 
+                placeholder="What are you delivering or what route?"></textarea>
         </div>
 
         <div class="flex flex-col gap-3">

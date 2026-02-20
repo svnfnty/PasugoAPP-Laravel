@@ -18,6 +18,7 @@ class Rider extends Authenticatable
         'password',
         'phone',
         'vehicle_type',
+        'vehicle_brand',
         'status',
         'lat',
         'lng',

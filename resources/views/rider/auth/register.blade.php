@@ -42,6 +42,14 @@
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
             @enderror
         </div>
+
+        <div class="mb-4">
+            <label for="vehicle_brand" class="block text-gray-700 font-bold mb-2">Vehicle Brand / Model</label>
+            <input type="text" name="vehicle_brand" id="vehicle_brand" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Honda TMX, Yamaha Mio" required>
+            @error('vehicle_brand')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
         
         <div class="mb-4">
             <label for="password" class="block text-gray-700 font-bold mb-2">Password</label>
