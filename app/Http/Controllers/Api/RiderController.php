@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rider;
+use App\Models\Message;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -78,6 +80,17 @@ class RiderController extends Controller
             return response()->json(['message' => 'Client not authenticated'], 401);
         }
 
+        // Prevent booking if there's already an active mission or order
+        $hasActive = \App\Models\Order::where('client_id', $client->id)
+            ->whereIn('status', ['pending', 'mission_accepted', 'accepted', 'picked_up'])
+            ->exists();
+
+        if ($hasActive) {
+            return response()->json([
+                'message' => 'You already have an active request or mission. Please complete or cancel it first.'
+            ], 403);
+        }
+
         try {
             // Broadcast to Rider with route details
             broadcast(new \App\Events\RiderOrdered(
@@ -107,19 +120,42 @@ class RiderController extends Controller
 
         try {
             $serviceType = $request->get('service_type', 'order');
-            broadcast(new \App\Events\RiderResponse($clientId, $rider->id, $rider->name, $request->decision, $serviceType));
+            $order = null;
 
-            // If rider accepts an 'order', send an automatic greeting
+            // If rider accepts, create a mission order to keep them connected
             if ($request->decision === 'accept') {
+                $order = Order::create([
+                    'client_id' => $clientId,
+                    'rider_id' => $rider->id,
+                    'pickup_address' => 'Awaiting Formalization',
+                    'delivery_address' => 'Awaiting Formalization',
+                    'status' => 'mission_accepted',
+                    'details' => 'Mission accepted, negotiating details...'
+                ]);
+
                 $greeting = "Hello! This is {$rider->name}. What is your order for today?";
                 if ($serviceType !== 'order') {
                     $greeting = "Hello! This is {$rider->name}. I have accepted your pasugo request. Please send me the details.";
                 }
 
-                broadcast(new \App\Events\ChatMessage($rider->id, $clientId, $greeting, 'rider'));
+                // Save message
+                Message::create([
+                    'sender_id' => $rider->id,
+                    'receiver_id' => $clientId,
+                    'message' => $greeting,
+                    'sender_type' => 'rider',
+                    'order_id' => $order->id
+                ]);
+
+                broadcast(new \App\Events\ChatMessage($rider->id, $clientId, $greeting, 'rider', $order->id));
             }
 
-            return response()->json(['message' => 'Response sent to client']);
+            broadcast(new \App\Events\RiderResponse($clientId, $rider->id, $rider->name, $request->decision, $serviceType, $order ? $order->id : null));
+
+            return response()->json([
+                'message' => 'Response sent to client',
+                'order' => $order ?? null
+            ]);
         }
         catch (\Exception $e) {
             Log::error('Broadcast failed in respondToClient: ' . $e->getMessage());
@@ -156,16 +192,47 @@ class RiderController extends Controller
             'receiver_id' => 'required',
             'message' => 'required|string',
             'sender_type' => 'required|in:client,rider',
+            'order_id' => 'nullable'
+        ]);
+
+        // Save message to database
+        Message::create([
+            'sender_id' => $request->sender_id,
+            'receiver_id' => $request->receiver_id,
+            'message' => $request->message,
+            'sender_type' => $request->sender_type,
+            'order_id' => $request->order_id
         ]);
 
         broadcast(new \App\Events\ChatMessage(
             $request->sender_id,
             $request->receiver_id,
             $request->message,
-            $request->sender_type
+            $request->sender_type,
+            $request->order_id
             ));
 
         return response()->json(['message' => 'Message sent']);
+    }
+
+    public function getChatHistory(Request $request)
+    {
+        $request->validate([
+            'client_id' => 'required',
+            'rider_id' => 'required',
+        ]);
+
+        $messages = Message::where(function($q) use ($request) {
+            $q->where('sender_id', $request->client_id)->where('sender_type', 'client')
+              ->where('receiver_id', $request->rider_id);
+        })->orWhere(function($q) use ($request) {
+            $q->where('sender_id', $request->rider_id)->where('sender_type', 'rider')
+              ->where('receiver_id', $request->client_id);
+        })
+        ->orderBy('created_at', 'asc')
+        ->get();
+
+        return response()->json($messages);
     }
 
     public function placeOrderFromChat(Request $request)
@@ -173,20 +240,41 @@ class RiderController extends Controller
         $request->validate([
             'client_id' => 'required|exists:clients,id',
             'details' => 'required|string',
-            'type' => 'required|string' // 'order' or 'pahatod'
+            'type' => 'required|string', // 'order' or 'pahatod'
+            'amount' => 'required|numeric|min:0'
         ]);
 
         $rider = auth()->guard('rider')->user();
 
-        $order = \App\Models\Order::create([
-            'client_id' => $request->client_id,
-            'rider_id' => $rider->id,
-            'pickup_address' => $request->type === 'order' ? 'Store/Restaurant' : 'Client Location',
-            'delivery_address' => 'Gingoog City Destination',
-            'details' => $request->details,
-            'status' => 'accepted', // Automatically accepted since rider clicked it
-            'total_amount' => 0, // Simplified for demo
-        ]);
+        // Update the existing mission order instead of creating a new one
+        $order = \App\Models\Order::where('rider_id', $rider->id)
+            ->where('client_id', $request->client_id)
+            ->where('status', 'mission_accepted')
+            ->latest()
+            ->first();
+
+        $amount = (float) $request->amount;
+
+        if ($order) {
+            $order->update([
+                'pickup_address' => $request->type === 'order' ? 'Store/Restaurant' : 'Client Location',
+                'delivery_address' => 'Gingoog City Destination',
+                'details' => $request->details,
+                'status' => 'accepted', // Automatically accepted since rider clicked it
+                'total_amount' => $amount,
+            ]);
+        } else {
+            // Fallback for safety
+            $order = \App\Models\Order::create([
+                'client_id' => $request->client_id,
+                'rider_id' => $rider->id,
+                'pickup_address' => $request->type === 'order' ? 'Store/Restaurant' : 'Client Location',
+                'delivery_address' => 'Gingoog City Destination',
+                'details' => $request->details,
+                'status' => 'accepted',
+                'total_amount' => $amount,
+            ]);
+        }
 
         // Update rider status to busy
         $rider->update(['status' => 'busy']);
@@ -202,11 +290,24 @@ class RiderController extends Controller
             ))->toOthers();
 
         // Broadcast to client that the order is formally placed
+        $formattedAmount = number_format($amount, 2);
+        $formalizedMsg = "✅ MISSION FORMALIZED!\n\nDetails: {$request->details}\nTotal Cost: ₱{$formattedAmount}\n\nI am now proceeding with your request. Thank you!";
+        
+        // Save message
+        Message::create([
+            'sender_id' => $rider->id,
+            'receiver_id' => $request->client_id,
+            'message' => $formalizedMsg,
+            'sender_type' => 'rider',
+            'order_id' => $order->id
+        ]);
+
         broadcast(new \App\Events\ChatMessage(
             $rider->id,
             $request->client_id,
-            "✅ I have formally placed your order: " . $request->details,
-            'rider'
+            $formalizedMsg,
+            'rider',
+            $order->id
             ));
 
         return response()->json([

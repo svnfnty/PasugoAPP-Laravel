@@ -73,6 +73,13 @@ class ClientAuthController extends Controller
         $totalSpent = $client->orders()->where('status', 'delivered')->sum('total_amount');
         $orderCount = $client->orders()->count();
 
-        return view('client.dashboard', compact('orders', 'totalSpent', 'orderCount'));
+        // Fetch ongoing mission (persistent chat phase)
+        $activeMission = \App\Models\Order::where('client_id', $client->id)
+            ->whereIn('status', ['mission_accepted', 'accepted', 'picked_up'])
+            ->with('rider')
+            ->latest()
+            ->first();
+
+        return view('client.dashboard', compact('orders', 'totalSpent', 'orderCount', 'activeMission'));
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -24,6 +25,14 @@ class OrderController extends Controller
 
         // In a real app, we would geocode addresses to get lat/lng
         // For this demo, we'll leave them null or mock them
+
+        $hasActive = Order::where('client_id', Auth::guard('client')->id())
+            ->whereIn('status', ['pending', 'mission_accepted', 'accepted', 'picked_up'])
+            ->exists();
+
+        if ($hasActive) {
+            return back()->with('error', 'You already have an active request or mission. Please complete or cancel it first.');
+        }
 
         $order = Order::create([
             'client_id' => Auth::guard('client')->id(),
@@ -86,6 +95,29 @@ class OrderController extends Controller
             broadcast(new \App\Events\RiderLocationUpdated(
                 $rider->id, $rider->lat, $rider->lng, 'available', $rider->name, $rider->bio
                 ))->toOthers();
+
+            // Notify client via chat
+            $completionMsg = "🏁 MISSION COMPLETED!\n\nI have successfully delivered your order. Thank you for using PasugoAPP!";
+            
+            Message::create([
+                'sender_id' => $rider->id,
+                'receiver_id' => $order->client_id,
+                'message' => $completionMsg,
+                'sender_type' => 'rider',
+                'order_id' => $order->id
+            ]);
+
+            broadcast(new \App\Events\ChatMessage(
+                $rider->id,
+                $order->client_id,
+                $completionMsg,
+                'rider',
+                $order->id
+            ));
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Order status updated!', 'order' => $order]);
         }
 
         return redirect()->route('rider.dashboard')->with('success', 'Order status updated!');

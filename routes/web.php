@@ -23,7 +23,13 @@ Route::prefix('client')->name('client.')->group(function () {
             Route::get('/order/create', [\App\Http\Controllers\OrderController::class , 'create'])->name('order.create');
             Route::post('/order', [\App\Http\Controllers\OrderController::class , 'store'])->name('order.store');
             Route::get('/riders/map', function () {
-                    return view('riders.map');
+                    $client = Auth::guard('client')->user();
+                    $activeMission = \App\Models\Order::where('client_id', $client->id)
+                        ->whereIn('status', ['mission_accepted', 'accepted', 'picked_up'])
+                        ->with('rider')
+                        ->latest()
+                        ->first();
+                    return view('riders.map', compact('activeMission'));
                 }
                 )->name('riders.map');
 
@@ -58,3 +64,4 @@ Route::prefix('rider')->name('rider.')->group(function () {
 
 // Shared Real-time Routes
 Route::post('/chat/send', [\App\Http\Controllers\Api\RiderController::class , 'sendMessage'])->name('chat.send');
+Route::get('/chat/history', [\App\Http\Controllers\Api\RiderController::class , 'getChatHistory'])->name('chat.history');

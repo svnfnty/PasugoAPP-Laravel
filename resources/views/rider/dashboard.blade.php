@@ -79,18 +79,9 @@
             </div>
 
             @if($order->status == 'accepted')
-                <form action="{{ route('rider.order.update', $order) }}" method="POST">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="status" value="picked_up">
-                    <div class="relative mb-3">
-                        <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black">₱</span>
-                        <input type="number" name="total_amount" step="0.01" required 
-                            class="w-full bg-slate-50 border-none rounded-3xl pl-10 pr-6 py-4 text-sm font-black focus:ring-2 focus:ring-orange-500" 
-                            placeholder="Final Cost">
-                    </div>
-                    <button type="submit" class="action-button bg-slate-900 text-white shadow-slate-200">VERIFY PICKUP</button>
-                </form>
+                <div class="bg-emerald-50 text-emerald-600 p-4 rounded-3xl text-center text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                    Order Formalized - Proceed to Delivery
+                </div>
             @elseif($order->status == 'picked_up')
                 <form action="{{ route('rider.order.update', $order) }}" method="POST">
                     @csrf
@@ -144,7 +135,7 @@
 
     <!-- Chat Input -->
     <div class="px-4 py-3 bg-white border-t border-slate-100 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
-        <button id="order-place-btn" onclick="placeOrder()" class="w-full bg-slate-900 text-white py-3.5 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] mb-3 hidden animate-urgent transition-all hover:bg-slate-800 active:scale-95 shadow-lg">FORMALIZE ORDER MISSION</button>
+        <button id="order-place-btn" onclick="showFormalizeModal()" class="w-full bg-slate-900 text-white py-3.5 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] mb-3 hidden animate-urgent transition-all hover:bg-slate-800 active:scale-95 shadow-lg">FORMALIZE ORDER MISSION</button>
         <div class="flex items-end gap-2">
             <input type="text" id="rider-chat-input" class="flex-1 bg-slate-50 border-[1.5px] border-slate-200 rounded-[24px] px-5 py-3 font-sans text-sm font-medium text-slate-900 outline-none transition-colors max-h-[120px] min-h-[46px] resize-none placeholder:text-slate-400 focus:border-orange-500 focus:bg-white" placeholder="Type a message..." autocomplete="off">
             <button onclick="sendRiderMessage()" class="w-[46px] h-[46px] rounded-full bg-orange-500 border-none text-white cursor-pointer flex items-center justify-center transition-all shrink-0 hover:bg-[#E85D2C] active:scale-90">
@@ -170,6 +161,36 @@
     });
 
     const riderId = {{ $rider->id }};
+    let activeClientId = null;
+    let currentOrderId = null;
+    let currentServiceType = 'order';
+
+    // Restore missions on load
+    const myMissions = @json($myMissions);
+    
+    window.onload = () => {
+        initRiderLocation();
+        if (myMissions.length > 0) {
+            const mission = myMissions[0];
+            activeClientId = mission.client_id;
+            currentOrderId = mission.id;
+            document.getElementById('chat-client-name').innerText = mission.client.name;
+            
+            const chatBtn = document.getElementById('order-place-btn');
+            if (mission.status === 'mission_accepted') {
+                openRiderChat(mission.client.name);
+                chatBtn.innerText = 'FORMALIZE ORDER MISSION';
+                chatBtn.onclick = showFormalizeModal;
+                chatBtn.classList.remove('hidden');
+            } else {
+                // For formalized orders, show COMPLETE DELIVERY button
+                chatBtn.innerText = 'COMPLETE DELIVERY';
+                chatBtn.onclick = completeDeliveryFromChat;
+                chatBtn.classList.remove('hidden');
+                document.getElementById('chat-head').classList.remove('hidden');
+            }
+        }
+    };
 
     echo.channel('rider.' + riderId)
         .listen('.rider.ordered', (data) => addRequestToUI(data))
@@ -198,7 +219,7 @@
                     <h3 class="text-white font-black text-lg">NEW ${data.serviceType.toUpperCase()}</h3>
                     <p class="text-orange-400 text-[10px] font-black uppercase tracking-widest mt-1">Client: ${data.clientName}</p>
                 </div>
-                <div class="bg-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full px-2 py-1">LIVE</div>
+                <div class="bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded-full px-2 py-1">LIVE</div>
             </div>
             <div class="flex gap-2">
                 <button class="flex-1 py-4 rounded-2xl bg-slate-800 text-white text-[10px] font-black uppercase" onclick="respond(${data.clientId}, 'decline', '${data.clientName}')">IGNORE</button>
@@ -232,47 +253,63 @@
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({ decision, service_type: serviceType })
-        }).then(() => {
+        }).then(r => r.json()).then(data => {
             if (card) card.remove();
             if (decision === 'accept') {
                 activeClientId = clientId;
+                currentOrderId = data.order ? data.order.id : null;
                 currentServiceType = serviceType;
+                
                 openRiderChat(clientName);
                 document.getElementById('order-place-btn').classList.remove('hidden');
+                // Show chat head if closed later
+                document.getElementById('chat-head').classList.remove('hidden');
             }
             checkEmptyRequests();
         });
     }
 
-    let activeClientId = null;
-    let currentServiceType = null;
-
     echo.channel('chat.rider.' + riderId)
         .listen('.message.sent', (data) => {
             if (data.senderType === 'client' && activeClientId == data.senderId) {
                 appendMessage(data.message, 'client');
-                document.getElementById('rider-chat-window').classList.replace('hidden', 'flex');
+                // Auto-open if window is closed
+                if (document.getElementById('rider-chat-window').classList.contains('hidden')) {
+                    document.getElementById('rider-chat-window').classList.replace('hidden', 'flex');
+                    document.getElementById('chat-head').classList.add('hidden');
+                }
             }
         });
 
     function openRiderChat(clientName) {
         document.getElementById('chat-client-name').innerText = clientName;
         document.getElementById('rider-chat-window').classList.replace('hidden', 'flex');
-        document.getElementById('rider-chat-body').innerHTML = `
-            <div class="text-center py-2 my-2">
-                <span class="inline-block text-[11px] font-semibold text-slate-400 bg-white px-4 py-1.5 rounded-full border border-slate-100">Mission accepted. Securing line...</span>
-            </div>
-        `;
+        document.getElementById('chat-head').classList.add('hidden'); // Hide chat head when window is open
+
+        // Load Chat History
+        const chatBody = document.getElementById('rider-chat-body');
+        chatBody.innerHTML = '<div class="text-center py-8"><div class="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-orange-600 rounded-full" role="status"></div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Loading History</p></div>';
+
+        fetch(`/chat/history?client_id=${activeClientId}&rider_id=${riderId}`)
+            .then(r => r.json())
+            .then(messages => {
+                chatBody.innerHTML = '';
+                if (messages.length === 0) {
+                    chatBody.innerHTML = '<p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest py-8">Start of your mission conversation</p>';
+                }
+                messages.forEach(msg => {
+                    appendMessage(msg.message, msg.sender_type);
+                });
+            });
     }
 
     function appendMessage(text, type) {
         const body = document.getElementById('rider-chat-body');
-        
         const group = document.createElement('div');
         group.className = 'flex flex-col mb-2 ' + (type === 'rider' ? 'items-end' : 'items-start');
 
         const bubble = document.createElement('div');
-        bubble.className = 'max-w-[75%] px-4 py-3 text-[14px] font-medium leading-[1.45] break-words relative ' + 
+        bubble.className = 'max-w-[75%] px-4 py-3 text-[14px] font-medium leading-[1.45] break-words relative whitespace-pre-line ' + 
             (type === 'rider' 
                 ? 'bg-orange-500 text-white rounded-[20px] rounded-tr-[4px]' 
                 : 'bg-white text-slate-900 rounded-[20px] rounded-tl-[4px] border border-slate-200');
@@ -285,12 +322,16 @@
 
         group.appendChild(bubble);
         group.appendChild(time);
-        
         body.appendChild(group);
         body.scrollTop = body.scrollHeight;
     }
 
-    function closeRiderChat() { document.getElementById('rider-chat-window').classList.replace('flex', 'hidden'); }
+    function closeRiderChat() { 
+        document.getElementById('rider-chat-window').classList.replace('flex', 'hidden'); 
+        if (activeClientId) {
+            document.getElementById('chat-head').classList.remove('hidden');
+        }
+    }
 
     function sendRiderMessage() {
         const input = document.getElementById('rider-chat-input');
@@ -300,30 +341,92 @@
         fetch('/chat/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-            body: JSON.stringify({ sender_id: riderId, receiver_id: activeClientId, message: text, sender_type: 'rider' })
+            body: JSON.stringify({ 
+                sender_id: riderId, 
+                receiver_id: activeClientId, 
+                message: text, 
+                sender_type: 'rider',
+                order_id: currentOrderId
+            })
         });
         appendMessage(text, 'rider');
         input.value = '';
     }
 
-    function placeOrder() {
+    function showFormalizeModal() {
+        document.getElementById('formalize-modal').classList.replace('hidden', 'flex');
+    }
+
+    function closeFormalizeModal() {
+        document.getElementById('formalize-modal').classList.replace('flex', 'hidden');
+    }
+
+    function completeDeliveryFromChat() {
+        if (!currentOrderId) {
+            console.error('No active order ID found to complete.');
+            return;
+        }
         const btn = document.getElementById('order-place-btn');
+        btn.disabled = true;
+        btn.innerText = 'COMPLETING...';
+
+        fetch(`/rider/order/${currentOrderId}/status`, {
+            method: 'PATCH',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status: 'delivered' })
+        }).then(r => r.json()).then(data => {
+            btn.innerText = 'DELIVERED ✅';
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }).catch(err => {
+            console.error('Completion Error:', err);
+            btn.disabled = false;
+            btn.innerText = 'COMPLETE DELIVERY';
+        });
+    }
+
+    function placeOrder() {
+        const amount = document.getElementById('formalize-amount').value;
+        if (!amount) {
+            alert('Please enter the total amount');
+            return;
+        }
+
+        const btn = document.getElementById('order-place-btn');
+        const modalBtn = document.querySelector('#formalize-modal button[onclick="placeOrder()"]');
+        
         if (btn.disabled) return;
         btn.disabled = true;
-        btn.innerText = 'UPLOADING DATA...';
+        modalBtn.disabled = true;
+        modalBtn.innerText = 'PROCESSING...';
 
-        const lastMessage = document.getElementById('rider-chat-body').lastElementChild;
-        // Search text inside bubbles since structure changed
-        const bubble = lastMessage ? lastMessage.querySelector('.bg-white') : null;
-        const details = bubble ? bubble.innerText : 'Service Entry';
+        // Get details from last client message or default
+        const bubbles = document.querySelectorAll('#rider-chat-body .bg-white');
+        const details = bubbles.length > 0 ? bubbles[bubbles.length - 1].innerText : 'Service Entry';
 
         fetch('{{ route('rider.order.place_from_chat') }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: JSON.stringify({ client_id: activeClientId, details, type: currentServiceType })
+            body: JSON.stringify({ 
+                client_id: activeClientId, 
+                details, 
+                type: currentServiceType,
+                amount: amount
+            })
         }).then(r => r.json()).then(data => {
-            btn.innerText = 'MISSION FORMALIZED ✅';
-            if (activeClientId) window.open(`https://www.google.com/maps/dir/?api=1&destination=8.8258,125.0827`, '_blank');
+            currentOrderId = data.order.id;
+            btn.disabled = false;
+            btn.innerText = 'COMPLETE DELIVERY';
+            btn.onclick = completeDeliveryFromChat;
+            closeFormalizeModal();
+            
+            // Optionally notify client that we are starting delivery
+            appendMessage('Amount confirmed! I am starting the delivery now.', 'rider');
         });
     }
 
@@ -340,20 +443,12 @@
             const { Geolocation } = Capacitor.Plugins;
             try {
                 await Geolocation.requestPermissions();
-                await Geolocation.watchPosition({
-                    enableHighAccuracy: true,
-                    timeout: 10000
-                }, (position, err) => {
-                    if (position) {
-                        updateLocationOnServer(position.coords.latitude, position.coords.longitude);
-                    }
+                await Geolocation.watchPosition({ enableHighAccuracy: true, timeout: 10000 }, (position, err) => {
+                    if (position) updateLocationOnServer(position.coords.latitude, position.coords.longitude);
                 });
-            } catch (e) {
-                console.error('Native GPS Error', e);
-            }
+            } catch (e) { console.error('Native GPS Error', e); }
         } else if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(p => updateLocationOnServer(p.coords.latitude, p.coords.longitude), 
-            null, { enableHighAccuracy: true });
+            navigator.geolocation.watchPosition(p => updateLocationOnServer(p.coords.latitude, p.coords.longitude), null, { enableHighAccuracy: true });
         }
     }
 
@@ -361,7 +456,35 @@
         updateLocationOnServer(8.8258 + (Math.random()-0.5)*0.01, 125.0827 + (Math.random()-0.5)*0.01);
         alert('GPS SIGNAL SIMULATED');
     }
-
-    window.onload = initRiderLocation;
 </script>
+
+<!-- Chat Head (Chat Bubble) -->
+<div id="chat-head" class="hidden fixed bottom-24 right-6 w-14 h-14 bg-orange-600 rounded-full shadow-2xl flex items-center justify-center cursor-pointer z-[90] animate-bounce" onclick="openRiderChat(document.getElementById('chat-client-name').innerText)">
+    <span class="text-2xl">💬</span>
+    <div class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white flex items-center justify-center">
+        <span class="text-[10px] text-white font-black">1</span>
+    </div>
+</div>
+</div>
+
+<!-- Formalize Modal -->
+<div id="formalize-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] items-center justify-center px-6">
+    <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
+        <div class="text-4xl mb-4 text-center">💰</div>
+        <h2 class="text-xl font-black text-slate-900 text-center mb-2">Finalize Amount</h2>
+        <p class="text-slate-500 text-xs font-medium text-center mb-8 uppercase tracking-widest">Enter total cost to formalize mission</p>
+        
+        <div class="relative mb-6">
+            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">₱</span>
+            <input type="number" id="formalize-amount" step="0.01" 
+                class="w-full bg-slate-50 border-none rounded-3xl pl-12 pr-8 py-5 text-2xl font-black focus:ring-2 focus:ring-orange-500 transition-all" 
+                placeholder="0.00" autofocus>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <button onclick="placeOrder()" class="w-full bg-slate-900 text-white py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95">CONFIRM & SEND TO CLIENT</button>
+            <button onclick="closeFormalizeModal()" class="w-full py-4 rounded-3xl font-black text-[10px] text-slate-400 uppercase tracking-widest transition-all hover:bg-slate-50">Cancel</button>
+        </div>
+    </div>
+</div>
 @endsection

@@ -16,13 +16,15 @@ class ChatMessage implements ShouldBroadcastNow
     public $receiverId;
     public $message;
     public $senderType; // 'client' or 'rider'
+    public $orderId;
 
-    public function __construct($senderId, $receiverId, $message, $senderType)
+    public function __construct($senderId, $receiverId, $message, $senderType, $orderId = null)
     {
         $this->senderId = $senderId;
         $this->receiverId = $receiverId;
         $this->message = $message;
         $this->senderType = $senderType;
+        $this->orderId = $orderId;
     }
 
     public function broadcastOn(): array

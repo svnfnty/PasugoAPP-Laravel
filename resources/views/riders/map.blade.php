@@ -24,6 +24,7 @@
     data-reverb-port="{{ config('broadcasting.connections.reverb.options.port') }}"
     data-csrf="{{ csrf_token() }}"
     data-client-id="{{ Auth::guard('client')->id() ?? 'guest' }}"
+    data-active-mission="{{ isset($activeMission) ? json_encode($activeMission) : '' }}"
 >
 
     {{-- ═══════════════════════════════════════════════════════

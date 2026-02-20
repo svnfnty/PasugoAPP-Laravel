@@ -25,16 +25,28 @@
     </div>
 </div>
 
+@php
+    $hasActiveMission = $orders->whereIn('status', ['pending', 'mission_accepted', 'accepted', 'picked_up'])->first();
+@endphp
+
 <!-- Main Action -->
 <div class="mb-12">
-    <a href="{{ route('client.riders.map') }}" class="block w-full group relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-8 text-center shadow-2xl transition-all active:scale-[0.98]">
-        <div class="absolute inset-0 bg-gradient-to-tr from-orange-600/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
-        <div class="relative z-10">
-            <div class="text-4xl mb-4">🚀</div>
-            <h2 class="text-xl font-black text-white tracking-tight">Express PasugoAPP</h2>
-            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Choose a rider & start ordering</p>
+    @if($hasActiveMission)
+        <div class="block w-full bg-slate-50 rounded-[2.5rem] p-8 text-center border border-slate-200">
+            <div class="text-4xl mb-4">🛡️</div>
+            <h2 class="text-xl font-black text-slate-400 tracking-tight">Active Duty</h2>
+            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">You have an ongoing mission. Please complete it first.</p>
         </div>
-    </a>
+    @else
+        <a href="{{ route('client.riders.map') }}" class="block w-full group relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-8 text-center shadow-2xl transition-all active:scale-[0.98]">
+            <div class="absolute inset-0 bg-gradient-to-tr from-orange-600/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative z-10">
+                <div class="text-4xl mb-4">🚀</div>
+                <h2 class="text-xl font-black text-white tracking-tight">Express PasugoAPP</h2>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Choose a rider & start ordering</p>
+            </div>
+        </a>
+    @endif
 </div>
 
 <!-- Recent Orders -->
@@ -80,4 +92,195 @@
         </div>
     @endforelse
 </div>
+
+<!-- Client Chat Window (Full Screen Mobile) -->
+<div id="client-chat-window" class="hidden fixed inset-0 bg-white z-[100] flex-col shadow-2xl">
+    <!-- Chat Header -->
+    <div class="flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-100 min-h-[64px] shrink-0 pt-[max(12px,env(safe-area-inset-top))]">
+        <button onclick="closeClientChat()" class="w-9 h-9 border-none bg-transparent cursor-pointer flex items-center justify-center text-orange-500 rounded-full transition-colors shrink-0 hover:bg-slate-50">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-[#FF3D00] flex items-center justify-center text-lg shrink-0 text-white">🛵</div>
+        <div class="flex-1 min-w-0">
+            <div id="chat-rider-name" class="text-base font-bold text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis">Rider</div>
+            <div class="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Active now</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chat Route Banner -->
+    <div class="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-100 shrink-0">
+        <div class="text-xl">📍</div>
+        <div>
+            <div class="text-xs font-bold text-orange-500 uppercase tracking-[0.5px]">Secure Line</div>
+            <div class="text-xs text-slate-500 font-medium">Mission in progress</div>
+        </div>
+    </div>
+
+    <!-- Chat Body -->
+    <div class="flex-1 overflow-y-auto px-4 py-5 bg-slate-50 flex flex-col gap-1 [&::-webkit-scrollbar]:hidden" id="client-chat-body">
+        <div class="text-center py-2 my-2">
+            <span class="inline-block text-[11px] font-semibold text-slate-400 bg-white px-4 py-1.5 rounded-full border border-slate-100">Rider connected. Negotiating details...</span>
+        </div>
+    </div>
+
+    <!-- Chat Input -->
+    <div class="px-4 py-3 bg-white border-t border-slate-100 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
+        <div class="flex items-end gap-2">
+            <input type="text" id="client-chat-input" class="flex-1 bg-slate-50 border-[1.5px] border-slate-200 rounded-[24px] px-5 py-3 font-sans text-sm font-medium text-slate-900 outline-none transition-colors max-h-[120px] min-h-[46px] resize-none placeholder:text-slate-400 focus:border-orange-500 focus:bg-white" placeholder="Type a message..." autocomplete="off">
+            <button onclick="sendClientMessage()" class="w-[46px] h-[46px] rounded-full bg-orange-500 border-none text-white cursor-pointer flex items-center justify-center transition-all shrink-0 hover:bg-[#E85D2C] active:scale-90">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Chat Head (Chat Bubble) -->
+<div id="client-chat-head" class="hidden fixed bottom-24 right-6 w-14 h-14 bg-orange-600 rounded-full shadow-2xl flex items-center justify-center cursor-pointer z-[90] animate-bounce" onclick="openClientChat(document.getElementById('chat-rider-name').innerText)">
+    <span class="text-2xl">💬</span>
+    <div class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white flex items-center justify-center">
+        <span class="text-[10px] text-white font-black">1</span>
+    </div>
+</div>
+
+<script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
+<script>
+    const echo = new Echo({
+        broadcaster: 'reverb',
+        key: '{{ config('broadcasting.connections.reverb.key') }}',
+        wsHost: '{{ config('broadcasting.connections.reverb.options.host') }}',
+        wsPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
+        wssPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
+        forceTLS: false,
+        enabledTransports: ['ws', 'wss'],
+    });
+
+    const clientId = {{ auth()->guard('client')->id() }};
+    let activeRiderId = null;
+
+    // Restore mission on load
+    const activeMission = @json($activeMission);
+    
+    window.onload = () => {
+        if (activeMission) {
+            activeRiderId = activeMission.rider_id;
+            document.getElementById('chat-rider-name').innerText = activeMission.rider.name;
+            
+            if (activeMission.status === 'mission_accepted') {
+                openClientChat(activeMission.rider.name);
+            } else {
+                document.getElementById('client-chat-head').classList.remove('hidden');
+            }
+        }
+    };
+
+    echo.channel('client.' + clientId)
+        .listen('.rider.responded', (data) => {
+            if (data.decision === 'accept') {
+                activeRiderId = data.riderId;
+                // Store mission data for ongoing context
+                activeMission = { id: data.orderId, rider_id: data.riderId, rider: { name: data.riderName } };
+                openClientChat(data.riderName);
+            }
+        });
+
+    echo.channel('chat.client.' + clientId)
+        .listen('.message.sent', (data) => {
+            if (data.senderType === 'rider' && activeRiderId == data.senderId) {
+                appendClientMessage(data.message, 'rider');
+                
+                // Auto-open if closed
+                if (document.getElementById('client-chat-window').classList.contains('hidden')) {
+                    document.getElementById('client-chat-window').classList.replace('hidden', 'flex');
+                    document.getElementById('client-chat-head').classList.add('hidden');
+                }
+
+                // If mission completed, reload to clear "Active Duty" status
+                if (data.message.includes('🏁 MISSION COMPLETED')) {
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                }
+            }
+        });
+
+    function openClientChat(riderName) {
+        document.getElementById('chat-rider-name').innerText = riderName;
+        document.getElementById('client-chat-window').classList.replace('hidden', 'flex');
+        document.getElementById('client-chat-head').classList.add('hidden');
+
+        // Load History
+        const chatBody = document.getElementById('client-chat-body');
+        chatBody.innerHTML = '<div class="text-center py-8"><div class="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-orange-600 rounded-full" role="status"></div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Loading History</p></div>';
+
+        fetch(`/chat/history?client_id=${clientId}&rider_id=${activeRiderId}`)
+            .then(r => r.json())
+            .then(messages => {
+                chatBody.innerHTML = '';
+                if (messages.length === 0) {
+                   chatBody.innerHTML = '<p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest py-8">Start of your mission conversation</p>';
+                }
+                messages.forEach(msg => {
+                    appendClientMessage(msg.message, msg.sender_type);
+                });
+            });
+    }
+
+    function closeClientChat() {
+        document.getElementById('client-chat-window').classList.replace('flex', 'hidden');
+        if (activeRiderId) {
+            document.getElementById('client-chat-head').classList.remove('hidden');
+        }
+    }
+
+    function appendClientMessage(text, type) {
+        const body = document.getElementById('client-chat-body');
+        const group = document.createElement('div');
+        group.className = 'flex flex-col mb-2 ' + (type === 'client' ? 'items-end' : 'items-start');
+
+        const bubble = document.createElement('div');
+        bubble.className = 'max-w-[75%] px-4 py-3 text-[14px] font-medium leading-[1.45] break-words relative whitespace-pre-line ' + 
+            (type === 'client' 
+                ? 'bg-orange-500 text-white rounded-[20px] rounded-tr-[4px]' 
+                : 'bg-white text-slate-900 rounded-[20px] rounded-tl-[4px] border border-slate-200');
+        bubble.innerText = text;
+
+        const time = document.createElement('div');
+        time.className = 'text-[10px] text-slate-400 mt-1 px-1 ' + (type === 'client' ? 'text-right' : '');
+        const now = new Date();
+        time.innerText = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+        group.appendChild(bubble);
+        group.appendChild(time);
+        body.appendChild(group);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function sendClientMessage() {
+        const input = document.getElementById('client-chat-input');
+        const text = input.value.trim();
+        if (!text || !activeRiderId) return;
+        
+        fetch('/chat/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+            body: JSON.stringify({ 
+                sender_id: clientId, 
+                receiver_id: activeRiderId, 
+                message: text, 
+                sender_type: 'client',
+                order_id: activeMission ? activeMission.id : null
+            })
+        });
+        appendClientMessage(text, 'client');
+        input.value = '';
+    }
+</script>
 @endsection

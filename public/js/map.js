@@ -51,6 +51,8 @@
         { attribution: '© OpenStreetMap' }
     );
 
+    let currentMissionId = null;
+
     const map = L.map('map', {
         zoomControl: false,
         layers: [satelliteLayer]
@@ -548,38 +550,44 @@
     function openChat() {
         var chatOverlay = document.getElementById('chat-overlay');
         document.getElementById('chat-rider-name').textContent = selectedRiderName;
-        document.getElementById('chat-body').innerHTML = '';
 
-        // Reset UI state
-        document.getElementById('chat-input-area').classList.remove('visible');
-        document.getElementById('chat-waiting').style.display = 'none';
-        document.getElementById('chat-timer').classList.remove('visible');
-
-        // Show route banner in chat
+        // Show route banner in chat ... [keeping original banner logic mostly]
         var banner = document.getElementById('chat-route-banner');
-
         var isProfileRoute = !document.getElementById('profile-route-form').classList.contains('hidden');
         var prefix = isProfileRoute ? 'profile' : 'pahatod';
-
         var pickup = locations[prefix + '-pickup'];
         var dropoff = locations[prefix + '-dropoff'];
 
         if (activeServiceType === 'pahatod' && (pickup || dropoff)) {
             document.getElementById('route-banner-icon').textContent = '🏍️';
             document.getElementById('route-banner-type').textContent = 'Pahatod';
-            document.getElementById('route-banner-detail').textContent =
-                (pickup ? pickup.name : '...') + ' → ' + (dropoff ? dropoff.name : '...');
+            document.getElementById('route-banner-detail').textContent = (pickup ? pickup.name : '...') + ' → ' + (dropoff ? dropoff.name : '...');
             banner.style.display = 'flex';
         } else if (activeServiceType === 'pasugo') {
             document.getElementById('route-banner-icon').textContent = '📦';
             document.getElementById('route-banner-type').textContent = 'Pasugo';
             document.getElementById('route-banner-detail').textContent = 'Delivery / Errand Request';
             banner.style.display = 'flex';
-        } else {
-            banner.style.display = 'none';
-        }
+        } else { banner.style.display = 'none'; }
 
-        // Hide service panel, show chat
+        // Fetch History
+        var chatBody = document.getElementById('chat-body');
+        chatBody.innerHTML = '<div class="msg-system"><span class="msg-system-text">Connecting to secure chat...</span></div>';
+
+        fetch('/chat/history?client_id=' + CLIENT_ID + '&rider_id=' + selectedRiderId)
+            .then(function (r) { return r.json(); })
+            .then(function (messages) {
+                chatBody.innerHTML = '';
+                if (messages.length > 0) {
+                    document.getElementById('chat-input-area').classList.add('visible');
+                    messages.forEach(function (msg) {
+                        appendMessage(msg.message, msg.sender_type === 'client' ? 'sent' : 'received');
+                    });
+                } else {
+                    appendSystemMessage('Awaiting rider response...');
+                }
+            });
+
         document.getElementById('service-panel').style.display = 'none';
         chatOverlay.classList.add('active');
     }
@@ -610,6 +618,13 @@
     function startService(type) {
         if (!selectedRiderId || isRequestPending) return;
 
+        // Prevent booking if mission is already active
+        if (body.dataset.activeMission) {
+            alert('You already have an ongoing mission. Please complete it from your dashboard or active chat.');
+            closeChat();
+            return;
+        }
+
         isRequestPending = true;
 
         document.getElementById('chat-waiting').style.display = 'flex';
@@ -634,6 +649,15 @@
                 pickup: pickup,
                 dropoff: dropoff
             })
+        }).then(async r => {
+            if (r.status === 403) {
+                const data = await r.json();
+                alert(data.message);
+                isRequestPending = false;
+                closeChat();
+                // If they have an active mission but it wasn't in dataset (e.g. just accepted), reload
+                if (data.message.includes('mission')) location.reload();
+            }
         });
 
         // Countdown timer
@@ -705,6 +729,13 @@
         .listen('.message.sent', function (data) {
             if (data.senderType === 'rider' && selectedRiderId == data.senderId) {
                 appendMessage(data.message, 'received');
+
+                // If mission completed, reload to clear active states
+                if (data.message.indexOf('🏁 MISSION COMPLETED') !== -1) {
+                    setTimeout(function () {
+                        location.reload();
+                    }, 3000);
+                }
             }
         });
 
@@ -772,7 +803,8 @@
                 sender_id: parseInt(CLIENT_ID) || 0,
                 receiver_id: selectedRiderId,
                 message: text,
-                sender_type: 'client'
+                sender_type: 'client',
+                order_id: currentMissionId
             })
         });
 
@@ -878,6 +910,32 @@
         return n.toString().padStart(2, '0');
     }
 
+
+    // ══════════════════════════════════════════════════════════
+    //  RESTORE MISSION
+    // ══════════════════════════════════════════════════════════
+    const activeMissionRaw = body.dataset.activeMission;
+    if (activeMissionRaw) {
+        try {
+            const mission = JSON.parse(activeMissionRaw);
+            selectedRiderId = mission.rider_id;
+            selectedRiderName = mission.rider ? mission.rider.name : 'Rider';
+            currentMissionId = mission.id;
+            activeServiceType = mission.details && mission.details.includes('Delivery') ? 'pasugo' : 'pahatod';
+
+            // Re-open chat after a short delay for initialization
+            setTimeout(function () {
+                if (mission.status === 'mission_accepted') {
+                    openChat();
+                    document.getElementById('chat-input-area').classList.add('visible');
+                    appendMessage('We are still connected. Ready for your order details.', 'received');
+                } else {
+                    // For formalized orders, just prepare the chat but don't force open it on map
+                    // Usually client is on dashboard anyway, but if they go to map, it's ready.
+                }
+            }, 500);
+        } catch (e) { }
+    }
 
     // ══════════════════════════════════════════════════════════
     //  PUBLIC API  (called from inline onclick handlers)

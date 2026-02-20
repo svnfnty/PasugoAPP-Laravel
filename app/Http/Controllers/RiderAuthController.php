@@ -97,11 +97,17 @@ class RiderAuthController extends Controller
             ->whereIn('status', ['accepted', 'picked_up'])
             ->get();
 
+        // Fetch ongoing missions (persistent chat phase)
+        $myMissions = Order::where('rider_id', $rider->id)
+            ->whereIn('status', ['mission_accepted', 'accepted', 'picked_up'])
+            ->with('client')
+            ->get();
+
         // Financial Stats
         $totalIncome = Order::where('rider_id', $rider->id)->where('status', 'delivered')->sum('total_amount');
         $totalOrders = Order::where('rider_id', $rider->id)->where('status', 'delivered')->count();
         $netIncome = $totalIncome * 0.9; // Simulation: 10% app fee
 
-        return view('rider.dashboard', compact('rider', 'availableOrders', 'myActiveOrders', 'totalIncome', 'totalOrders', 'netIncome'));
+        return view('rider.dashboard', compact('rider', 'availableOrders', 'myActiveOrders', 'myMissions', 'totalIncome', 'totalOrders', 'netIncome'));
     }
 }
