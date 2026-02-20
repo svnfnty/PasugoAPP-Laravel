@@ -68,6 +68,84 @@
 
 
     // ══════════════════════════════════════════════════════════
+    //  TOAST NOTIFICATION SYSTEM
+    // ══════════════════════════════════════════════════════════
+
+    function createToastContainer() {
+        var existing = document.getElementById('pasugo-toast-container');
+        if (existing) return existing;
+        var container = document.createElement('div');
+        container.id = 'pasugo-toast-container';
+        container.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;flex-direction:column;align-items:center;padding:12px 16px;pointer-events:none;gap:8px;';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    function showToast(message, type, duration) {
+        type = type || 'warning';
+        duration = duration || 5000;
+
+        var container = createToastContainer();
+        var toast = document.createElement('div');
+
+        var colors = {
+            warning: { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', icon: '⚠️' },
+            error: { bg: 'linear-gradient(135deg, #ef4444, #dc2626)', icon: '❌' },
+            info: { bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', icon: 'ℹ️' },
+            success: { bg: 'linear-gradient(135deg, #10b981, #059669)', icon: '✅' }
+        };
+        var c = colors[type] || colors.warning;
+
+        toast.style.cssText =
+            'pointer-events:auto;max-width:420px;width:100%;padding:16px 20px;border-radius:16px;color:white;font-family:Inter,sans-serif;font-size:14px;font-weight:600;' +
+            'display:flex;align-items:flex-start;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18),0 2px 8px rgba(0,0,0,0.1);' +
+            'backdrop-filter:blur(12px);transform:translateY(-100%);opacity:0;transition:all 0.4s cubic-bezier(0.16,1,0.3,1);' +
+            'background:' + c.bg + ';';
+
+        var iconSpan = document.createElement('span');
+        iconSpan.style.cssText = 'font-size:20px;flex-shrink:0;margin-top:1px;';
+        iconSpan.textContent = c.icon;
+
+        var textDiv = document.createElement('div');
+        textDiv.style.cssText = 'flex:1;line-height:1.45;';
+        textDiv.textContent = message;
+
+        var closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'background:rgba(255,255,255,0.25);border:none;color:white;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s;';
+        closeBtn.textContent = '✕';
+        closeBtn.onmouseenter = function () { closeBtn.style.background = 'rgba(255,255,255,0.4)'; };
+        closeBtn.onmouseleave = function () { closeBtn.style.background = 'rgba(255,255,255,0.25)'; };
+        closeBtn.onclick = function () { dismissToast(toast); };
+
+        toast.appendChild(iconSpan);
+        toast.appendChild(textDiv);
+        toast.appendChild(closeBtn);
+        container.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                toast.style.transform = 'translateY(0)';
+                toast.style.opacity = '1';
+            });
+        });
+
+        // Auto dismiss
+        var timeout = setTimeout(function () { dismissToast(toast); }, duration);
+        toast._timeout = timeout;
+    }
+
+    function dismissToast(toast) {
+        if (toast._dismissed) return;
+        toast._dismissed = true;
+        clearTimeout(toast._timeout);
+        toast.style.transform = 'translateY(-100%)';
+        toast.style.opacity = '0';
+        setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+    }
+
+
+    // ══════════════════════════════════════════════════════════
     //  STATE
     // ══════════════════════════════════════════════════════════
 
@@ -502,7 +580,7 @@
 
     function confirmPahatodRide() {
         if (!locations['profile-pickup'] || !locations['profile-dropoff']) {
-            alert('Please set both pickup and dropoff locations.');
+            showToast('Please set both pickup and dropoff locations.', 'info', 4000);
             return;
         }
         openChatWithService('pahatod', true);
@@ -515,14 +593,18 @@
 
         // Only direct to chat if available
         if (riderObj.data.status !== 'available') {
-            alert('This rider is currently busy. Please wait or try another rider.');
+            showToast(
+                '🛵 ' + escapeHtml(riderObj.data.name) + ' is currently accommodating another user. Please choose a different rider.',
+                'warning',
+                5000
+            );
             return;
         }
 
         // For Pahatod, ensure route is set
         if (activeServiceType === 'pahatod') {
             if (!locations['pahatod-pickup'] || !locations['pahatod-dropoff']) {
-                alert('Please set your pickup and destination first.');
+                showToast('Please set your pickup and destination first.', 'info', 4000);
                 backToSearch();
                 return;
             }
@@ -620,7 +702,7 @@
 
         // Prevent booking if mission is already active
         if (body.dataset.activeMission) {
-            alert('You already have an ongoing mission. Please complete it from your dashboard or active chat.');
+            showToast('You already have an ongoing mission. Please complete it from your dashboard or active chat.', 'warning', 5000);
             closeChat();
             return;
         }
@@ -649,11 +731,29 @@
                 dropoff: dropoff
             })
         }).then(async r => {
-            if (r.status === 403) {
+            if (r.status === 409) {
+                // Rider is busy / accommodating another user
                 const data = await r.json();
-                alert(data.message);
+                isRequestPending = false;
+                clearInterval(countdownInterval);
+                document.getElementById('chat-timer').classList.remove('visible');
+                document.getElementById('chat-waiting').style.display = 'none';
+                closeChat();
+                showToast(
+                    '🛵 ' + (data.rider_name || 'This rider') + ' is currently accommodating another user. Please choose a different rider.',
+                    'warning',
+                    6000
+                );
+                // Update the rider's status locally so the list reflects it
+                if (riderMarkers[selectedRiderId]) {
+                    riderMarkers[selectedRiderId].data.status = 'busy';
+                    updateRiderList();
+                }
+            } else if (r.status === 403) {
+                const data = await r.json();
                 isRequestPending = false;
                 closeChat();
+                showToast(data.message, 'error', 5000);
                 // If they have an active mission but it wasn't in dataset (e.g. just accepted), reload
                 if (data.message.includes('mission')) location.reload();
             }

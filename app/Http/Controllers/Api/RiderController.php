@@ -108,8 +108,21 @@ class RiderController extends Controller
             return response()->json(['message' => 'Client not authenticated'], 401);
         }
 
+        // Check if rider is currently busy / accommodating another user
+        $riderHasActiveOrder = Order::where('rider_id', $rider->id)
+            ->whereIn('status', ['pending', 'mission_accepted', 'accepted', 'picked_up'])
+            ->exists();
+
+        if ($rider->status === 'busy' || $riderHasActiveOrder) {
+            return response()->json([
+                'message' => 'This rider is currently accommodating another user. Please choose a different rider.',
+                'reason' => 'rider_busy',
+                'rider_name' => $rider->name,
+            ], 409);
+        }
+
         // Prevent booking if there's already an active mission or order
-        $hasActive = \App\Models\Order::where('client_id', $client->id)
+        $hasActive = Order::where('client_id', $client->id)
             ->whereIn('status', ['pending', 'mission_accepted', 'accepted', 'picked_up'])
             ->exists();
 
