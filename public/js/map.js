@@ -861,7 +861,7 @@
             fetch('/client/riders/' + selectedRiderId + '/cancel', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN }
-            });
+            }).catch(function () { /* ignore cancel failures */ });
             isRequestPending = false;
         }
 
@@ -933,7 +933,23 @@
                 showToast(data.message, 'error', 5000);
                 // If they have an active mission but it wasn't in dataset (e.g. just accepted), reload
                 if (data.message.includes('mission')) location.reload();
+            } else if (r.ok) {
+                // Request accepted by server
+                const data = await r.json();
+                if (data.broadcast_warning) {
+                    showToast('⚠️ Real-time notifications may be delayed. The rider will be notified shortly.', 'info', 5000);
+                }
+            } else {
+                // Unexpected error
+                isRequestPending = false;
+                closeChat();
+                showToast('Something went wrong. Please try again.', 'error', 4000);
             }
+        }).catch(function (err) {
+            console.error('[Order] Network error:', err);
+            isRequestPending = false;
+            closeChat();
+            showToast('Network error. Please check your connection and try again.', 'error', 5000);
         });
 
         // Countdown timer
@@ -956,7 +972,7 @@
                 fetch('/client/riders/' + selectedRiderId + '/cancel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN }
-                });
+                }).catch(function () { /* ignore cancel failures */ });
                 isRequestPending = false;
             }
         }, 1000);
