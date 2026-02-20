@@ -20,8 +20,9 @@
 
 <body
     data-reverb-key="{{ config('broadcasting.connections.reverb.key') }}"
-    data-reverb-host="{{ config('broadcasting.connections.reverb.options.host') }}"
-    data-reverb-port="{{ config('broadcasting.connections.reverb.options.port') }}"
+    data-reverb-host="{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}"
+    data-reverb-port="{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}"
+
     data-csrf="{{ csrf_token() }}"
     data-client-id="{{ Auth::guard('client')->id() ?? 'guest' }}"
     data-active-mission="{{ isset($activeMission) ? json_encode($activeMission) : '' }}"
