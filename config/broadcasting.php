@@ -42,7 +42,7 @@ return [
                 'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
             ],
             'client_options' => [
-                'verify' => false, // Prevents timeouts when Web App talks to Reverb on Railway
+                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
             ],
         ],
 
