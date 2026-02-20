@@ -64,11 +64,10 @@
         const riderName = "{{ auth()->guard('rider')->user()->name }}";
         document.getElementById('rider-name-display').innerText = riderName;
 
-        const reverbHost = '{{ config('broadcasting.connections.reverb.options.host') }}'.replace(/^https?:\/\//, '');
         const echo = new Echo({
             broadcaster: 'reverb',
             key: '{{ config('broadcasting.connections.reverb.key') }}',
-            wsHost: reverbHost,
+            wsHost: '{{ config('broadcasting.connections.reverb.options.host') }}',
             wsPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
             wssPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
             forceTLS: false,

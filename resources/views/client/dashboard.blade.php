@@ -24,7 +24,7 @@
         <div class="text-xl font-black tracking-tighter text-slate-800">{{ $orderCount }}</div>
     </div>
 </div>
-
+ 
 @php
     $hasActiveMission = $orders->whereIn('status', ['pending', 'mission_accepted', 'accepted', 'picked_up'])->first();
 @endphp
@@ -157,11 +157,10 @@
 <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
-    const reverbHost = '{{ config('broadcasting.connections.reverb.options.host') }}'.replace(/^https?:\/\//, '');
     const echo = new Echo({
         broadcaster: 'reverb',
         key: '{{ config('broadcasting.connections.reverb.key') }}',
-        wsHost: reverbHost,
+        wsHost: '{{ config('broadcasting.connections.reverb.options.host') }}',
         wsPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
         wssPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
         forceTLS: false,

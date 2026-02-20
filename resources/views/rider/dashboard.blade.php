@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('content')
+@section('content') 
 <style>
     .mobile-card { @apply bg-white rounded-[2.5rem] p-6 shadow-sm border border-slate-100 mb-4; }
     .stat-pill { @apply flex-1 bg-slate-50 p-4 rounded-3xl text-center border border-slate-100; }
@@ -158,11 +158,10 @@
 <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
-    const reverbHost = '{{ config('broadcasting.connections.reverb.options.host') }}'.replace(/^https?:\/\//, '');
-    const echo = new Echo({
+   const echo = new Echo({
         broadcaster: 'reverb',
         key: '{{ config('broadcasting.connections.reverb.key') }}',
-        wsHost: reverbHost,
+        wsHost: '{{ config('broadcasting.connections.reverb.options.host') }}',
         wsPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
         wssPort: '{{ config('broadcasting.connections.reverb.options.port') }}',
         forceTLS: false,
