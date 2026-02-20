@@ -131,6 +131,11 @@
     <!-- Chat Input -->
     <div class="px-4 py-3 bg-white border-t border-slate-100 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
         <div class="flex items-end gap-2">
+            <button onclick="shareLiveLocation()" class="w-[46px] h-[46px] rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 hover:bg-slate-200 active:scale-95 transition-all" title="Share Location">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+            </button>
             <input type="text" id="client-chat-input" class="flex-1 bg-slate-50 border-[1.5px] border-slate-200 rounded-[24px] px-5 py-3 font-sans text-sm font-medium text-slate-900 outline-none transition-colors max-h-[120px] min-h-[46px] resize-none placeholder:text-slate-400 focus:border-orange-500 focus:bg-white" placeholder="Type a message..." autocomplete="off">
             <button onclick="sendClientMessage()" class="w-[46px] h-[46px] rounded-full bg-orange-500 border-none text-white cursor-pointer flex items-center justify-center transition-all shrink-0 hover:bg-[#E85D2C] active:scale-90">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -201,7 +206,7 @@
     echo.channel('chat.client.' + clientId)
         .listen('.message.sent', (data) => {
             if (data.senderType === 'rider' && activeRiderId == data.senderId) {
-                appendClientMessage(data.message, 'rider');
+                appendClientMessage(data.message, 'rider', data.type, data.locationData);
                 
                 // Auto-open if closed
                 if (document.getElementById('client-chat-window').classList.contains('hidden')) {
@@ -250,8 +255,23 @@
                    chatBody.innerHTML = '<p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest py-8">Start of your mission conversation</p>';
                 }
                 messages.forEach(msg => {
-                    appendClientMessage(msg.message, msg.sender_type);
+                    appendClientMessage(msg.message, msg.sender_type, msg.type, msg.location_data);
                 });
+            });
+
+        // Listen for real-time tracking from this specific rider
+        echo.channel('riders')
+            .listen('.rider.location.updated', (data) => {
+                if (data.riderId == activeRiderId) {
+                    const mapImg = document.getElementById(`map-rider-${activeRiderId}`);
+                    const mapLink = document.getElementById(`link-rider-${activeRiderId}`);
+                    if (mapImg) {
+                        mapImg.src = `https://static-maps.yandex.ru/1.x/?lang=en_US&ll=${data.lng},${data.lat}&z=16&l=map&size=300,150&pt=${data.lng},${data.lat},pm2rdm`;
+                    }
+                    if (mapLink) {
+                        mapLink.href = `https://www.google.com/maps?q=${data.lat},${data.lng}`;
+                    }
+                }
             });
     }
 
@@ -262,7 +282,7 @@
         }
     }
 
-    function appendClientMessage(text, type) {
+    function appendClientMessage(text, type, msgType = 'text', locationData = null) {
         const body = document.getElementById('client-chat-body');
         const group = document.createElement('div');
         group.className = 'flex flex-col mb-2 ' + (type === 'client' ? 'items-end' : 'items-start');
@@ -272,7 +292,27 @@
             (type === 'client' 
                 ? 'bg-orange-500 text-white rounded-[20px] rounded-tr-[4px]' 
                 : 'bg-white text-slate-900 rounded-[20px] rounded-tl-[4px] border border-slate-200');
-        bubble.innerText = text;
+        
+        if (msgType === 'location') {
+            const isMe = type === 'client';
+            const entityId = isMe ? clientId : (activeRiderId || 'unknown');
+            const entityType = isMe ? 'client' : 'rider';
+
+            bubble.innerHTML = `
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <span>📍</span>
+                        <span class="font-bold">Live Location Shared</span>
+                    </div>
+                    <div class="w-full aspect-video bg-slate-100 rounded-xl overflow-hidden relative">
+                        <img id="map-${entityType}-${entityId}" src="https://static-maps.yandex.ru/1.x/?lang=en_US&ll=${locationData.lng},${locationData.lat}&z=16&l=map&size=300,150&pt=${locationData.lng},${locationData.lat},pm2rdm" class="w-full h-full object-cover">
+                    </div>
+                    <a id="link-${entityType}-${entityId}" href="https://www.google.com/maps?q=${locationData.lat},${locationData.lng}" target="_blank" class="text-[10px] font-black uppercase tracking-widest ${isMe ? 'text-white/80' : 'text-slate-400'} underline">View on Google Maps</a>
+                </div>
+            `;
+        } else {
+            bubble.innerText = text;
+        }
 
         const time = document.createElement('div');
         time.className = 'text-[10px] text-slate-400 mt-1 px-1 ' + (type === 'client' ? 'text-right' : '');
@@ -283,6 +323,56 @@
         group.appendChild(time);
         body.appendChild(group);
         body.scrollTop = body.scrollHeight;
+    }
+
+    function shareLiveLocation() {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(position => {
+            const { latitude, longitude } = position.coords;
+            const text = "📍 Live Location Shared";
+            
+            fetch('/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                body: JSON.stringify({ 
+                    sender_id: clientId, 
+                    receiver_id: activeRiderId, 
+                    message: text, 
+                    sender_type: 'client',
+                    type: 'location',
+                    location_data: { lat: latitude, lng: longitude },
+                    order_id: activeMission ? activeMission.id : null
+                })
+            }).then(r => r.json()).then(data => {
+                appendClientMessage(text, 'client', 'location', { lat: latitude, lng: longitude });
+                startRealtimeTracking();
+            });
+        }, err => {
+            alert('Failed to get location: ' + err.message);
+        });
+    }
+
+    function startRealtimeTracking() {
+        if (window.trackingInterval) clearInterval(window.trackingInterval);
+        
+        // Update every 10 seconds
+        window.trackingInterval = setInterval(() => {
+            navigator.geolocation.getCurrentPosition(position => {
+                updateClientLocationOnServer(position.coords.latitude, position.coords.longitude);
+            });
+        }, 10000);
+    }
+
+    function updateClientLocationOnServer(lat, lng) {
+        fetch('{{ route('client.location.update') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: JSON.stringify({ lat, lng })
+        });
     }
 
     function sendClientMessage() {

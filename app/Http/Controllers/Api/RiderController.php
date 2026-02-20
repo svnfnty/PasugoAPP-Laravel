@@ -71,6 +71,34 @@ class RiderController extends Controller
         return response()->json(['message' => 'Unauthorized'], 401);
     }
 
+    public function updateClientLocation(Request $request)
+    {
+        $request->validate([
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+        ]);
+
+        $client = auth()->guard('client')->user();
+
+        if ($client) {
+            $client->update([
+                'lat' => $request->lat,
+                'lng' => $request->lng,
+            ]);
+
+            // Broadcast real-time location specifically for tracking
+            broadcast(new \App\Events\ClientLocationUpdated(
+                $client->id,
+                $request->lat,
+                $request->lng
+            ))->toOthers();
+
+            return response()->json(['message' => 'Client location updated and broadcasted']);
+        }
+
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+
     public function orderRider(Request $request, $id)
     {
         $rider = Rider::findOrFail($id);
@@ -206,14 +234,21 @@ class RiderController extends Controller
             'receiver_id' => 'required',
             'message' => 'required|string',
             'sender_type' => 'required|in:client,rider',
+            'type' => 'nullable|string',
+            'location_data' => 'nullable',
             'order_id' => 'nullable'
         ]);
 
+        $type = $request->get('type', 'text');
+        $locationData = $request->get('location_data');
+
         // Save message to database
-        Message::create([
+        $msg = Message::create([
             'sender_id' => $request->sender_id,
             'receiver_id' => $request->receiver_id,
             'message' => $request->message,
+            'type' => $type,
+            'location_data' => $locationData,
             'sender_type' => $request->sender_type,
             'order_id' => $request->order_id
         ]);
@@ -223,10 +258,12 @@ class RiderController extends Controller
             $request->receiver_id,
             $request->message,
             $request->sender_type,
-            $request->order_id
+            $request->order_id,
+            $type,
+            $locationData
             ));
 
-        return response()->json(['message' => 'Message sent']);
+        return response()->json(['message' => 'Message sent', 'msg' => $msg]);
     }
 
     public function getChatHistory(Request $request)

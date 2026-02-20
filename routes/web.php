@@ -36,6 +36,7 @@ Route::prefix('client')->name('client.')->group(function () {
                 // Client Ordering Action
                 Route::post('/riders/{id}/order', [\App\Http\Controllers\Api\RiderController::class , 'orderRider'])->name('order.rider');
                 Route::post('/riders/{id}/cancel', [\App\Http\Controllers\Api\RiderController::class , 'cancelRequest'])->name('order.cancel');
+                Route::post('/location', [\App\Http\Controllers\Api\RiderController::class , 'updateClientLocation'])->name('location.update');
             }
             );
         });

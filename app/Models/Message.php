@@ -6,5 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Message extends Model
 {
-    protected $fillable = ['sender_id', 'receiver_id', 'message', 'sender_type', 'order_id'];
+    protected $fillable = [
+        'sender_id',
+        'receiver_id',
+        'message',
+        'type',
+        'location_data',
+        'sender_type',
+        'order_id',
+    ];
+
+    protected $casts = [
+        'location_data' => 'array',
+    ];
 }
