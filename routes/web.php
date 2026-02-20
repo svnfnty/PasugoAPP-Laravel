@@ -59,6 +59,7 @@ Route::prefix('rider')->name('rider.')->group(function () {
             // Rider Responding Action
             Route::post('/clients/{clientId}/respond', [\App\Http\Controllers\Api\RiderController::class , 'respondToClient'])->name('rider.respond');
             Route::post('/order/place-from-chat', [\App\Http\Controllers\Api\RiderController::class , 'placeOrderFromChat'])->name('order.place_from_chat');
+            Route::post('/order/{order}/cancel-mission', [\App\Http\Controllers\Api\RiderController::class , 'cancelMission'])->name('order.cancel_mission');
         }
         );
     });

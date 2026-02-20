@@ -135,7 +135,10 @@
 
     <!-- Chat Input -->
     <div class="px-4 py-3 bg-white border-t border-slate-100 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
-        <button id="order-place-btn" onclick="showFormalizeModal()" class="w-full bg-slate-900 text-white py-3.5 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] mb-3 hidden animate-urgent transition-all hover:bg-slate-800 active:scale-95 shadow-lg">FORMALIZE ORDER MISSION</button>
+        <div id="mission-action-buttons" class="flex gap-2 mb-3 hidden">
+            <button id="cancel-mission-btn" onclick="showCancelConfirm()" class="flex-1 bg-rose-500 text-white py-3.5 rounded-[24px] text-[10px] font-black uppercase tracking-[0.15em] transition-all hover:bg-rose-600 active:scale-95 shadow-lg shadow-rose-100">✕ CANCEL</button>
+            <button id="order-place-btn" onclick="showFormalizeModal()" class="flex-[2] bg-slate-900 text-white py-3.5 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] animate-urgent transition-all hover:bg-slate-800 active:scale-95 shadow-lg">FORMALIZE ORDER MISSION</button>
+        </div>
         <div class="flex items-end gap-2">
             <button onclick="shareRiderLiveLocation()" class="w-[46px] h-[46px] rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 hover:bg-slate-200 active:scale-95 transition-all" title="Share Location">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -182,18 +185,22 @@
             document.getElementById('chat-client-name').innerText = mission.client.name;
             
             const chatBtn = document.getElementById('order-place-btn');
+            const actionBtns = document.getElementById('mission-action-buttons');
+            const cancelBtn = document.getElementById('cancel-mission-btn');
             if (mission.status === 'mission_accepted') {
                 openRiderChat(mission.client.name);
                 currentServiceType = mission.service_type || 'order';
                 chatBtn.innerText = currentServiceType === 'pahatod' ? 'FORMALIZE SERVICE' : 'FORMALIZE ORDER MISSION';
                 chatBtn.onclick = showFormalizeModal;
-                chatBtn.classList.remove('hidden');
+                cancelBtn.classList.remove('hidden');
+                actionBtns.classList.remove('hidden');
             } else {
                 currentServiceType = mission.service_type || 'order';
                 // For formalized orders, show COMPLETE DELIVERY button
                 chatBtn.innerText = currentServiceType === 'pahatod' ? 'DROP OFF COMPLETE' : 'COMPLETE DELIVERY';
                 chatBtn.onclick = completeDeliveryFromChat;
-                chatBtn.classList.remove('hidden');
+                cancelBtn.classList.add('hidden');
+                actionBtns.classList.remove('hidden');
                 document.getElementById('chat-head').classList.remove('hidden');
             }
         }
@@ -292,8 +299,11 @@
                 
                 openRiderChat(clientName);
                 const chatBtn = document.getElementById('order-place-btn');
+                const actionBtns = document.getElementById('mission-action-buttons');
+                const cancelBtn = document.getElementById('cancel-mission-btn');
                 chatBtn.innerText = currentServiceType === 'pahatod' ? 'FORMALIZE SERVICE' : 'FORMALIZE ORDER MISSION';
-                chatBtn.classList.remove('hidden');
+                cancelBtn.classList.remove('hidden');
+                actionBtns.classList.remove('hidden');
                 // Show chat head if closed later
                 document.getElementById('chat-head').classList.remove('hidden');
             }
@@ -547,6 +557,8 @@
             btn.disabled = false;
             btn.innerText = currentServiceType === 'pahatod' ? 'DROP OFF COMPLETE' : 'COMPLETE DELIVERY';
             btn.onclick = completeDeliveryFromChat;
+            // Hide cancel button after formalizing (order is now committed)
+            document.getElementById('cancel-mission-btn').classList.add('hidden');
             closeFormalizeModal();
             
             // Optionally notify client that we are starting delivery
@@ -579,6 +591,50 @@
     function simulateLocation() {
         updateLocationOnServer(8.8258 + (Math.random()-0.5)*0.01, 125.0827 + (Math.random()-0.5)*0.01);
         alert('GPS SIGNAL SIMULATED');
+    }
+    function showCancelConfirm() {
+        document.getElementById('cancel-confirm-modal').classList.replace('hidden', 'flex');
+    }
+
+    function closeCancelConfirm() {
+        document.getElementById('cancel-confirm-modal').classList.replace('flex', 'hidden');
+    }
+
+    function cancelMissionFromChat() {
+        if (!currentOrderId) {
+            console.error('No active order ID found to cancel.');
+            return;
+        }
+
+        const reasonSelect = document.getElementById('cancel-reason');
+        const reason = reasonSelect.value || 'No reason provided';
+
+        const confirmBtn = document.querySelector('#cancel-confirm-modal .bg-rose-500');
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = 'CANCELLING...';
+
+        fetch(`/rider/order/${currentOrderId}/cancel-mission`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ reason })
+        }).then(r => r.json()).then(data => {
+            closeCancelConfirm();
+            appendMessage('❌ Mission has been cancelled. Reason: ' + reason, 'rider');
+            
+            // Reset state
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }).catch(err => {
+            console.error('Cancel Error:', err);
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = 'YES, CANCEL MISSION';
+            alert('Failed to cancel mission. Please try again.');
+        });
     }
 </script>
 
@@ -628,6 +684,32 @@
         <div class="flex flex-col gap-3">
             <button onclick="placeOrder()" class="w-full bg-slate-900 text-white py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95">CONFIRM & SEND TO CLIENT</button>
             <button onclick="closeFormalizeModal()" class="w-full py-4 rounded-3xl font-black text-[10px] text-slate-400 uppercase tracking-widest transition-all hover:bg-slate-50">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div id="cancel-confirm-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] items-center justify-center px-6">
+    <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl">
+        <div class="text-4xl mb-4 text-center">⚠️</div>
+        <h2 class="text-xl font-black text-slate-900 text-center mb-2">Cancel Mission?</h2>
+        <p class="text-slate-500 text-xs font-medium text-center mb-6 uppercase tracking-widest">This will notify the client and end the conversation</p>
+        
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2 block">Reason for Cancellation</label>
+            <select id="cancel-reason" class="w-full bg-slate-50 border-none rounded-3xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-rose-500 transition-all appearance-none">
+                <option value="Client is unresponsive">Client is unresponsive</option>
+                <option value="Unable to fulfill the request">Unable to fulfill the request</option>
+                <option value="Client requested cancellation">Client requested cancellation</option>
+                <option value="Location too far">Location too far</option>
+                <option value="Emergency / Personal reason">Emergency / Personal reason</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <button onclick="cancelMissionFromChat()" class="w-full bg-rose-500 text-white py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-rose-100 hover:bg-rose-600 transition-all active:scale-95">YES, CANCEL MISSION</button>
+            <button onclick="closeCancelConfirm()" class="w-full py-4 rounded-3xl font-black text-[10px] text-slate-400 uppercase tracking-widest transition-all hover:bg-slate-50">Go Back</button>
         </div>
     </div>
 </div>

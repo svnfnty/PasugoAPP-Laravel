@@ -392,6 +392,81 @@ class RiderController extends Controller
             'order' => $order
         ]);
     }
+    public function cancelMission(Request $request, $orderId)
+    {
+        $rider = auth()->guard('rider')->user();
+
+        if (!$rider) {
+            return response()->json(['message' => 'Rider not authenticated'], 401);
+        }
+
+        try {
+            $order = Order::where('id', $orderId)
+                ->where('rider_id', $rider->id)
+                ->whereIn('status', ['mission_accepted', 'accepted', 'picked_up'])
+                ->first();
+
+            if (!$order) {
+                return response()->json(['message' => 'No active mission found to cancel'], 404);
+            }
+
+            $clientId = $order->client_id;
+            $reason = $request->get('reason', 'Rider cancelled the mission');
+
+            // Update order status to cancelled
+            $order->update(['status' => 'cancelled']);
+
+            // Set rider back to available
+            $rider->update(['status' => 'available']);
+
+            // Broadcast rider status update
+            broadcast(new \App\Events\RiderLocationUpdated(
+                $rider->id,
+                $rider->lat,
+                $rider->lng,
+                'available',
+                $rider->name,
+                $rider->bio
+            ))->toOthers();
+
+            // Send a cancellation message in chat
+            $cancelMsg = "❌ MISSION CANCELLED\n\nThe rider has cancelled this mission.\nReason: {$reason}\n\nYou can request a new rider from the map.";
+            
+            Message::create([
+                'sender_id' => $rider->id,
+                'receiver_id' => $clientId,
+                'message' => $cancelMsg,
+                'sender_type' => 'rider',
+                'order_id' => $order->id
+            ]);
+
+            broadcast(new \App\Events\ChatMessage(
+                $rider->id,
+                $clientId,
+                $cancelMsg,
+                'rider',
+                $order->id
+            ));
+
+            // Broadcast cancellation event to client
+            broadcast(new \App\Events\MissionCancelled(
+                $clientId,
+                $rider->id,
+                $rider->name,
+                $order->id,
+                $reason
+            ));
+
+            return response()->json([
+                'message' => 'Mission cancelled successfully',
+                'order' => $order
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Cancel mission failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to cancel mission', 'error' => $e->getMessage()], 500);
+        }
+    }
+
     public function cancelRequest(Request $request, $id)
     {
         $clientId = auth()->guard('client')->id();
