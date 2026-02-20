@@ -15,7 +15,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     {{-- Map Styles --}}
-    <link rel="stylesheet" href="{{ asset('css/map.css') }}">
+    <link rel="stylesheet" href="{{ secure_asset('css/map.css') }}">
 </head>
 
 <body
