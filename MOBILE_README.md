@@ -66,5 +66,31 @@ Since your Laravel app is currently running on XAMPP, you must tell the Android 
 
 ---
 
+## 🔒 Biometric Authentication (Fingerprint Login)
+
+I have implemented the backend support for Biometric/Persistent logins. To enable this in your Android app:
+
+### 1. Install Capacitor Biometric Plugin
+Run this in your terminal:
+```bash
+npm install @capacitor-community/native-biometric
+npx cap sync
+```
+
+### 2. Implementation logic (Frontend JS)
+When the user logs in for the first time with a password, you should:
+1.  Call the new `/api/login` endpoint.
+2.  Upon success, use `NativeBiometric.setCredentials` to store the Email/Password or the Sanctum Token in the device's secure vault.
+3.  On next app open:
+    *   Call `NativeBiometric.verifyIdentity`.
+    *   If successful, retrieve the stored token and use it to authenticate.
+
+### 3. Backend Endpoints
+- **Login:** `POST /api/login` (Returns a long-lived Sanctum token)
+- **Check Status:** `GET /api/user` (Requires Bearer Token)
+- **Logout:** `POST /api/logout` (Requires Bearer Token)
+
+---
+
 ## ⚠️ Important Note
 **Do not delete the `android/` folder.** This folder contains your actual Android Studio project, including your app icons and splash screen configurations.

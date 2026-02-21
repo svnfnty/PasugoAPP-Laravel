@@ -21,7 +21,9 @@ class ClientAuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::guard('client')->attempt($credentials)) {
+        $remember = $request->has('remember');
+
+        if (Auth::guard('client')->attempt($credentials, $remember)) {
             $request->session()->regenerate();
             return redirect()->route('client.dashboard');
         }

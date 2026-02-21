@@ -23,7 +23,9 @@ class RiderAuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::guard('rider')->attempt($credentials)) {
+        $remember = $request->has('remember');
+
+        if (Auth::guard('rider')->attempt($credentials, $remember)) {
             $rider = Auth::guard('rider')->user();
             $rider->update(['status' => 'available']);
 
