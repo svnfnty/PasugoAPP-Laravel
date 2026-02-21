@@ -632,6 +632,7 @@
         init: init,
         isMobileApp: isMobileApp,
         setupPin: setupPin,
+        verifyPin: verifyPin,
         submitPin: submitPin,
         logout: logout,
         showPinModal: showPinModal,
@@ -643,6 +644,7 @@
         hideDebug: hideDebugPanel,
         isPinVerified: () => pinVerified,
     };
+
 
     // Auto-initialize
     if (document.readyState === 'loading') {
