@@ -1,0 +1,19 @@
+{
+    frankenphp
+    order php_server before reverse_proxy
+}
+
+:{$PORT} {
+    root * public
+    encode zstd gzip
+
+    # Proxy WebSocket requests to Reverb
+    handle /app* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    # Handle Laravel requests via FrankenPHP
+    handle {
+        php_server
+    }
+}

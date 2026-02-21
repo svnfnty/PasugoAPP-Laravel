@@ -4,8 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite",
-        "start": "php artisan config:clear && php artisan migrate --force && export PHP_CLI_SERVER_WORKERS=5 && concurrently --kill-others -n \"laravel,reverb,proxy\" -c \"magenta,blue,green\" \"php artisan serve --host=127.0.0.1 --port=8000\" \"php artisan reverb:start --host=127.0.0.1 --port=8081\" \"node proxy.cjs\""
+        "dev": "vite"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
@@ -20,8 +19,6 @@
         "@capacitor/android": "^8.1.0",
         "@capacitor/cli": "^8.1.0",
         "@capacitor/core": "^8.1.0",
-        "@capacitor/geolocation": "^8.1.0",
-        "concurrently": "^9.0.1",
-        "http-proxy": "^1.18.1"
+        "@capacitor/geolocation": "^8.1.0"
     }
 }
