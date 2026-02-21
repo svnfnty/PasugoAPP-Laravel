@@ -21,6 +21,10 @@
             <span class="w-2 h-2 rounded-full bg-{{ $rider->status == 'available' ? 'emerald' : 'amber' }}-500"></span>
             <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">{{ $rider->status }}</span>
         </div>
+        <div id="realtime-status-pill" class="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-slate-100 rounded-full border border-slate-200 transition-all duration-500">
+            <span id="realtime-status-dot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+            <span id="realtime-status-text" class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">Initializing...</span>
+        </div>
     </div>
     <div class="flex gap-2">
          <button onclick="simulateLocation()" class="p-3 bg-slate-100 rounded-2xl text-xs">🛰️</button>
@@ -177,15 +181,6 @@
     const maxReconnectAttempts = 10;
     const reconnectDelay = 2000;
 
-    // --- DEBUG CONSOLE LOGGING ---
-    function logEvent(msg, data) {
-        const logs = document.getElementById('debug-logs');
-        if (!logs) return;
-        const entry = document.createElement('div');
-        entry.style.marginBottom = '2px';
-        entry.innerHTML = `<span style="color: #94a3b8">[${new Date().toLocaleTimeString()}]</span> ${msg} ${data ? JSON.stringify(data) : ''}`;
-        logs.prepend(entry);
-    }
 
     const echo = new Echo({
         broadcaster: 'reverb',
@@ -203,8 +198,38 @@
     function updateConnectionStatus(status, message) {
         connectionState = status;
         console.log(`[Rider WebSocket] ${status}: ${message}`);
-        logEvent(`STATUS: ${status}`, message);
         
+        // Update Real-time Status Pill
+        const pill = document.getElementById('realtime-status-pill');
+        const dot = document.getElementById('realtime-status-dot');
+        const text = document.getElementById('realtime-status-text');
+        
+        if (pill && dot && text) {
+            switch(status) {
+                case 'connected':
+                    pill.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100 transition-all duration-500';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]';
+                    text.className = 'text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600';
+                    text.innerText = 'Connected & Live';
+                    break;
+                case 'connecting':
+                case 'reconnecting':
+                    pill.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-amber-50 rounded-full border border-amber-100 transition-all duration-500';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse';
+                    text.className = 'text-[9px] font-black uppercase tracking-[0.15em] text-amber-600';
+                    text.innerText = 'Connecting...';
+                    break;
+                case 'error':
+                case 'failed':
+                case 'disconnected':
+                    pill.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-rose-50 rounded-full border border-rose-100 transition-all duration-500';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-rose-500';
+                    text.className = 'text-[9px] font-black uppercase tracking-[0.15em] text-rose-600';
+                    text.innerText = 'Connection Lost';
+                    break;
+            }
+        }
+
         // Dispatch custom event for UI updates
         window.dispatchEvent(new CustomEvent('rider-websocket-status', { 
             detail: { status, message } 
@@ -215,7 +240,6 @@
     function handleConnectionError(error) {
         console.error('[Rider WebSocket] Connection error:', error);
         updateConnectionStatus('error', 'Connection failed, attempting to reconnect...');
-        logEvent('ERROR: Connection failed', error);
         
         if (reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
@@ -235,12 +259,10 @@
     echo.connector.pusher.connection.bind('connected', () => {
         reconnectAttempts = 0;
         updateConnectionStatus('connected', 'WebSocket connected successfully');
-        logEvent('SYSTEM: WebSocket Connected');
     });
 
     echo.connector.pusher.connection.bind('disconnected', () => {
         updateConnectionStatus('disconnected', 'WebSocket disconnected');
-        logEvent('SYSTEM: WebSocket Disconnected');
     });
 
     echo.connector.pusher.connection.bind('error', (error) => {
@@ -252,23 +274,19 @@
 
     // Safe channel subscription with error handling
     function safeChannelSubscribe(channelName, eventName, callback) {
-        logEvent(`SYSTEM: Subscribing to ${channelName}...`);
         try {
             const channel = echo.channel(channelName);
             channel.listen(eventName, (data) => {
-                logEvent(`EVENT: ${eventName} received`, data);
                 callback(data);
             });
             
             channel.error((error) => {
                 console.error(`[Rider WebSocket] Channel ${channelName} error:`, error);
-                logEvent(`ERROR: Channel ${channelName} failed`, error);
             });
             
             return channel;
         } catch (error) {
             console.error(`[Rider WebSocket] Failed to subscribe to ${channelName}:`, error);
-            logEvent(`ERROR: Subscription to ${channelName} failed`, error);
             return null;
         }
     }
@@ -847,12 +865,4 @@
     </div>
 </div>
 
-<!-- FLOATING DEBUG CONSOLE - MOVED TO TOP FOR VISIBILITY -->
-<div id="debug-console" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 500px; background: #0f172a; color: #4ade80; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 0.85rem; height: 180px; overflow-y: auto; z-index: 10000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 2px solid #334155;">
-    <div style="position: sticky; top: 0; background: #1e293b; color: #f8fafc; padding: 10px 15px; font-weight: bold; border-bottom: 2px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-        <span>🚀 FLEET DEBUG MONITOR</span>
-        <button onclick="location.reload()" style="background: #4f46e5; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Refresh Page</button>
-    </div>
-    <div id="debug-logs" style="padding: 15px;">Initializing system...</div>
-</div>
 @endsection
