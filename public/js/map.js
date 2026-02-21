@@ -325,10 +325,10 @@
     // ══════════════════════════════════════════════════════════
 
     const landmarks = [
-        { name: 'Jollibee Gingoog', pos: [8.8258, 125.0827], icon: '🍔' },
-        { name: 'Gaisano Gingoog', pos: [8.8298, 125.0827], icon: '🏬' },
-        { name: 'City Public Market', pos: [8.8235, 125.0835], icon: '🏪' },
-        { name: 'Gingoog City Hall', pos: [8.8222, 125.0850], icon: '🏛️' },
+        { name: 'Jollibee Gingoog', pos: [8.4930, 125.0633], icon: '🍔' },
+        { name: 'Gaisano Gingoog', pos: [8.4931, 125.0647], icon: '🏬' },
+        { name: 'City Public Market', pos: [8.4920, 125.0639], icon: '🏪' },
+        { name: 'Gingoog City Hall', pos: [8.4853, 125.0621], icon: '🏛️' },
     ];
 
     landmarks.forEach(function (l) {
