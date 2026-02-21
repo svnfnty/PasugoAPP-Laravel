@@ -47,17 +47,18 @@
                 <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                 <span id="ws-status-text" class="text-slate-600">Connecting...</span>
             </div>
-            <button class="btn-locate" id="btn-locate" onclick="window._pasugo.locateMe()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            <button class="btn-layers" id="btn-layers" onclick="window._pasugo.toggleLayers()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                    <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+                    <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/>
+                    <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
                 </svg>
             </button>
         </div>
     </div>
 
-
+ 
     {{-- ═══════════════════════════════════════════════════════
          MAP
     ═══════════════════════════════════════════════════════ --}}

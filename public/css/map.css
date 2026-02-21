@@ -220,7 +220,7 @@ body {
     background-clip: text;
 }
 
-.btn-locate {
+.btn-layers {
     width: 48px;
     height: 48px;
     background: var(--surface);
@@ -235,12 +235,12 @@ body {
     color: var(--primary);
 }
 
-.btn-locate:hover {
+.btn-layers:hover {
     transform: scale(1.06);
     box-shadow: var(--shadow-lg);
 }
 
-.btn-locate:active {
+.btn-layers:active {
     transform: scale(0.94);
 }
 

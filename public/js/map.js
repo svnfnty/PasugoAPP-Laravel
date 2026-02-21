@@ -127,11 +127,8 @@
         layers: [satelliteLayer]
     }).setView([8.8258, 125.0827], 15);
 
-    L.control.layers({
-        'Satellite': satelliteLayer,
-        'Street': streetLayer,
-        'Dark': darkLayer
-    }, null, { position: 'topright' }).addTo(map);
+    // Default layer control removed to avoid overlap on mobile.
+    // Functionality moved to the custom button in the header.
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -344,6 +341,23 @@
             })
         }).addTo(map).bindTooltip(l.name, { direction: 'top', offset: [0, -12] });
     });
+
+
+    // ══════════════════════════════════════════════════════════
+    //  MAP LAYERS TOGGLE
+    // ══════════════════════════════════════════════════════════
+
+    const layersArr = [satelliteLayer, streetLayer, darkLayer];
+    const layerNames = ['Satellite', 'Street', 'Dark View'];
+    let currentLayerIdx = 0; // Start with satellite as initialized in L.map
+
+    function toggleLayers() {
+        map.removeLayer(layersArr[currentLayerIdx]);
+        currentLayerIdx = (currentLayerIdx + 1) % layersArr.length;
+        map.addLayer(layersArr[currentLayerIdx]);
+
+        showToast('Switched to ' + layerNames[currentLayerIdx], 'info', 2500);
+    }
 
 
     // ══════════════════════════════════════════════════════════
@@ -1266,6 +1280,7 @@
         startService: startService,
         sendMessage: sendMessage,
         locateMe: locateMe,
+        toggleLayers: toggleLayers,
         showProfileRoute: showProfileRoute,
         hideProfileRoute: hideProfileRoute,
         confirmPahatodRide: confirmPahatodRide,
