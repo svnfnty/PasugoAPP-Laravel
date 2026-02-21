@@ -25,8 +25,7 @@ php artisan serve --host=127.0.0.1 --port=8000 &
 echo "Starting Laravel Reverb on port 8081..."
 php artisan reverb:start --host=127.0.0.1 --port=8081 &
 
-# Configure and Start Nginx to bridge the public $PORT to our internal services
-echo "Starting Nginx Proxy on port $PORT..."
-sed -i "s/\${PORT}/$PORT/g" nginx.conf
-nginx -c /app/nginx.conf -g "daemon off;"
+# Start Caddy as a reverse proxy to bridge the public $PORT to our internal services
+echo "Starting Caddy Proxy on port $PORT..."
+caddy run --config /app/Caddyfile --adapter caddyfile
 
