@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <title>@yield('title', 'PasugoAPP GINGOOG')</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-type" content="pasugo-mobile">
+    <meta name="user-type" content="{{ Auth::guard('client')->check() ? 'client' : (Auth::guard('rider')->check() ? 'rider' : 'guest') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -63,5 +65,11 @@
     <footer class="mt-auto py-10 text-center text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] safe-bottom">
         &copy; {{ date('Y') }} PasugoAPP GINGOOG - Fast & Reliable
     </footer>
+
+    {{-- PIN Modal for Mobile Authentication --}}
+    @include('components.pin-modal')
+
+    {{-- Mobile Authentication System --}}
+    <script src="{{ asset('js/mobile-auth.js') }}"></script>
 </body>
 </html>

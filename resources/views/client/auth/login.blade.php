@@ -37,4 +37,48 @@
         Don't have an account? <a href="{{ route('client.register') }}" class="text-orange-600 hover:underline">Register here</a>
     </p>
 </div>
+
+<script>
+(function() {
+    'use strict';
+    
+    // Check if we're in a Capacitor/WebView environment
+    function isCapacitor() {
+        return typeof window.Capacitor !== 'undefined' || 
+               (window.navigator && window.navigator.userAgent && 
+                window.navigator.userAgent.includes('Capacitor'));
+    }
+    
+    // Generate or get device ID
+    function getDeviceId() {
+        const key = 'pasugo_device_id';
+        let deviceId = localStorage.getItem(key);
+        if (!deviceId) {
+            deviceId = 'client_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            localStorage.setItem(key, deviceId);
+        }
+        return deviceId;
+    }
+    
+    // Add mobile detection to form
+    const loginForm = document.querySelector('form[action="{{ route('client.login') }}"]');
+    if (loginForm && isCapacitor()) {
+        // Add device ID field
+        const deviceInput = document.createElement('input');
+        deviceInput.type = 'hidden';
+        deviceInput.name = 'device_id';
+        deviceInput.value = getDeviceId();
+        loginForm.appendChild(deviceInput);
+        
+        // Add device name
+        const nameInput = document.createElement('input');
+        nameInput.type = 'hidden';
+        nameInput.name = 'device_name';
+        nameInput.value = 'Android Client App';
+        loginForm.appendChild(nameInput);
+        
+        console.log('[ClientLogin] Mobile environment detected, added device tracking');
+    }
+})();
+</script>
 @endsection
