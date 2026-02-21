@@ -18,8 +18,8 @@ php artisan migrate --force
 
 # Start the actual Laravel Web Server on the Railway $PORT
 echo "Starting web server on port $PORT..."
-php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+php artisan serve --host=0.0.0.0 --port=${PORT:-8080}  &
 
 # Start Laravel Reverb in the background on port 8081
 echo "Starting Laravel Reverb on port 8080..."
-php artisan reverb:start --host=0.0.0.0 --port=8080 &
+php artisan reverb:start --host=0.0.0.0 --port=8080
