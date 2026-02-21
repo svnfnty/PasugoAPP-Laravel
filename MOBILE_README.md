@@ -73,7 +73,7 @@ I have implemented the backend support for Biometric/Persistent logins. To enabl
 ### 1. Install Capacitor Biometric Plugin
 Run this in your terminal:
 ```bash
-npm install @capacitor-community/native-biometric
+npm install @capgo/capacitor-native-biometric
 npx cap sync
 ```
 
