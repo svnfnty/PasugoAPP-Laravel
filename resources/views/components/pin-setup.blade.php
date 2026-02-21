@@ -424,7 +424,7 @@
     // Save PIN to server
     async function savePin(pin) {
         try {
-            const response = await fetch(window.location.origin + '/api/pin/setup', {
+            const response = await fetch('/api/pin/setup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -465,7 +465,7 @@
         }
         
         try {
-            const response = await fetch(window.location.origin + '/api/pin/disable', {
+            const response = await fetch('/api/pin/disable', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

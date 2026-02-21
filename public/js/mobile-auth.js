@@ -6,14 +6,15 @@
 (function() {
     'use strict';
 
-    // Configuration
+    // Configuration - Use relative URLs to avoid mixed content issues
     const CONFIG = {
         TOKEN_KEY: 'pasugo_auth_token',
         USER_TYPE_KEY: 'pasugo_user_type',
         USER_ID_KEY: 'pasugo_user_id',
         PIN_ENABLED_KEY: 'pasugo_pin_enabled',
         DEVICE_ID_KEY: 'pasugo_device_id',
-        API_BASE_URL: window.location.origin + '/api',
+        // Use relative URL to avoid mixed content issues
+        API_BASE_URL: '/api',
     };
 
     // State
@@ -25,39 +26,43 @@
      * Initialize the mobile auth system
      */
     function init() {
-        console.log('[MobileAuth] Initializing... UA:', window.navigator?.userAgent);
+        console.log('[MobileAuth] Initializing...');
+        console.log('[MobileAuth] Protocol:', window.location.protocol);
+        console.log('[MobileAuth] Host:', window.location.host);
+        console.log('[MobileAuth] Origin:', window.location.origin);
         
-        // Always setup mobile auth - it works in both mobile and browser
+        // Always setup mobile auth
         setupMobileAuth();
         
-        // Log environment for debugging
+        // Log environment
         if (isMobileApp()) {
             console.log('[MobileAuth] Mobile app environment detected');
         } else {
-            console.log('[MobileAuth] Browser environment - session persistence enabled');
+            console.log('[MobileAuth] Browser environment');
         }
     }
 
     /**
-     * Check if running in Mobile WebView (Capacitor or any WebView)
+     * Check if running in Mobile WebView
      */
     function isMobileApp() {
         // Check for Capacitor
         if (typeof window.Capacitor !== 'undefined') {
+            console.log('[MobileAuth] Capacitor detected');
             return true;
         }
         
-        // Check user agent for WebView indicators
+        // Check user agent
         const ua = window.navigator?.userAgent || '';
         const webViewIndicators = [
             'Capacitor',
             'WebView',
             'wv',
-            'Android.*Version/[0-9]',
         ];
         
         for (const indicator of webViewIndicators) {
             if (ua.match(new RegExp(indicator, 'i'))) {
+                console.log('[MobileAuth] WebView detected via UA');
                 return true;
             }
         }
@@ -67,12 +72,13 @@
             return true;
         }
         
-        // Check if running in Android WebView (no window.chrome but has Android in UA)
+        // Android WebView detection
         if (/Android/.test(ua) && !/Chrome\/[0-9]/.test(ua)) {
+            console.log('[MobileAuth] Android WebView detected');
             return true;
         }
         
-        // For debugging: check if we should force mobile mode via URL param
+        // Force mobile mode via URL param
         if (window.location.search.includes('force_mobile=true')) {
             return true;
         }
@@ -84,17 +90,9 @@
      * Setup mobile authentication handlers
      */
     function setupMobileAuth() {
-        // Generate device ID if not exists
         ensureDeviceId();
-        
-        // Try to restore session on page load
         restoreSession();
-        
-        // Intercept login form submissions
         interceptLoginForms();
-        
-        // Add PIN modal to page if not exists
-        ensurePinModal();
     }
 
     /**
@@ -146,16 +144,22 @@
                                currentPath.includes('/order') || 
                                currentPath.includes('/map');
         
-        console.log('[MobileAuth] Current path:', currentPath, 'Token exists, validating...');
+        console.log('[MobileAuth] Token found, validating...');
+        console.log('[MobileAuth] Current path:', currentPath);
         
         isRestoring = true;
         
         try {
-            const response = await fetch(CONFIG.API_BASE_URL + '/token/validate', {
+            // Use relative URL to avoid mixed content
+            const validateUrl = CONFIG.API_BASE_URL + '/token/validate';
+            console.log('[MobileAuth] Validating at:', validateUrl);
+            
+            const response = await fetch(validateUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({
                     token: token,
@@ -163,7 +167,10 @@
                 }),
             });
 
+            console.log('[MobileAuth] Validate response status:', response.status);
+            
             const data = await response.json();
+            console.log('[MobileAuth] Validate response:', data);
 
             if (data.valid) {
                 console.log('[MobileAuth] Token valid, user:', data.user?.email);
@@ -172,6 +179,10 @@
                 // Store PIN status
                 if (data.pin_enabled) {
                     localStorage.setItem(CONFIG.PIN_ENABLED_KEY, 'true');
+                    console.log('[MobileAuth] PIN is enabled');
+                } else {
+                    localStorage.removeItem(CONFIG.PIN_ENABLED_KEY);
+                    console.log('[MobileAuth] PIN not enabled');
                 }
                 
                 // If on login page with valid token
@@ -179,19 +190,18 @@
                     // Check if we're on the correct login page for this user type
                     if (!isCorrectLoginPage(data.user_type)) {
                         console.log('[MobileAuth] Wrong login page for user type:', data.user_type);
-                        // Don't redirect - let user login with different account
                         clearStoredAuth();
+                        isRestoring = false;
                         return;
                     }
                     
-                    // Store user info for after PIN verification
+                    // Store user info
                     localStorage.setItem(CONFIG.USER_TYPE_KEY, data.user_type);
                     
-                    // If PIN is enabled, show PIN modal FIRST (before redirect)
+                    // If PIN is enabled and not yet verified, show PIN modal
                     if (data.pin_enabled && !pinVerified) {
-                        console.log('[MobileAuth] PIN required - showing modal first');
+                        console.log('[MobileAuth] PIN required - showing modal');
                         showPinModal();
-                        // Store target URL for after PIN verification
                         window.targetAfterPin = data.user_type === 'rider' 
                             ? '/rider/dashboard' 
                             : '/client/dashboard';
@@ -199,7 +209,7 @@
                         return;
                     }
                     
-                    // No PIN required or PIN already verified, redirect to dashboard
+                    // No PIN required or already verified, redirect to dashboard
                     const dashboardUrl = data.user_type === 'rider' 
                         ? '/rider/dashboard' 
                         : '/client/dashboard';
@@ -208,19 +218,17 @@
                     return;
                 }
                 
-                // If on protected page with PIN enabled and not verified, show PIN modal
+                // If on protected page with PIN enabled and not verified
                 if (isProtectedPage && data.pin_enabled && !pinVerified) {
                     console.log('[MobileAuth] On protected page, PIN required');
                     showPinModal();
                 }
                 
-                // Update UI to show logged-in state
                 updateUIForLoggedInUser(data.user, data.user_type);
             } else {
-                console.log('[MobileAuth] Token invalid or expired, clearing');
+                console.log('[MobileAuth] Token invalid:', data.message);
                 clearStoredAuth();
                 
-                // If on protected page with invalid token, redirect to login
                 if (isProtectedPage) {
                     const loginUrl = currentPath.includes('rider') 
                         ? '/rider/login' 
@@ -230,6 +238,7 @@
             }
         } catch (error) {
             console.error('[MobileAuth] Error validating token:', error);
+            // Don't clear auth on network error, just log it
         } finally {
             isRestoring = false;
         }
@@ -239,12 +248,10 @@
      * Intercept login forms to store tokens
      */
     function interceptLoginForms() {
-        // Find all login forms
         const loginForms = document.querySelectorAll('form[action*="login"]');
         
         loginForms.forEach(form => {
             form.addEventListener('submit', async function(e) {
-                // Only intercept if remember me is checked
                 const rememberCheckbox = form.querySelector('input[name="remember"]');
                 if (!rememberCheckbox || !rememberCheckbox.checked) {
                     return; // Let normal form submission proceed
@@ -253,36 +260,31 @@
                 e.preventDefault();
                 
                 const formData = new FormData(form);
-                
-                // Determine user type from form action or URL
                 const userType = form.action.includes('rider') ? 'rider' : 'client';
                 
                 try {
-                    // Ensure HTTPS is used to avoid mixed content errors
-                    let actionUrl = form.action;
-                    if (window.location.protocol === 'https:' && actionUrl.startsWith('http:')) {
-                        actionUrl = actionUrl.replace('http:', 'https:');
-                    }
+                    // Use the form's action URL directly (relative)
+                    const actionUrl = form.action;
+                    console.log('[MobileAuth] Submitting login to:', actionUrl);
                     
                     const response = await fetch(actionUrl, {
                         method: 'POST',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': getCsrfToken(),
+                            'Accept': 'application/json',
                         },
                         body: formData,
                     });
 
                     const data = await response.json();
+                    console.log('[MobileAuth] Login response:', data);
 
                     if (data.success && data.token) {
-                        // Store token and user info
                         storeAuthData(data.token, userType, data.user.id);
-                        
-                        // Redirect to dashboard (PIN setup moved to profile settings)
+                        console.log('[MobileAuth] Login successful, redirecting to:', data.redirect);
                         window.location.href = data.redirect;
                     } else {
-                        // Show error
                         alert(data.message || 'Login failed');
                     }
                 } catch (error) {
@@ -302,8 +304,8 @@
         localStorage.setItem(CONFIG.USER_TYPE_KEY, userType);
         localStorage.setItem(CONFIG.USER_ID_KEY, userId.toString());
         currentToken = token;
-        pinVerified = false; // Reset PIN verification on new login
-        console.log('[MobileAuth] Auth data stored');
+        pinVerified = false;
+        console.log('[MobileAuth] Auth data stored, token:', token.substring(0, 20) + '...');
     }
 
     /**
@@ -316,24 +318,29 @@
         localStorage.removeItem(CONFIG.PIN_ENABLED_KEY);
         currentToken = null;
         pinVerified = false;
+        console.log('[MobileAuth] Auth data cleared');
     }
 
     /**
-     * Setup PIN for quick access - NOW CALLED FROM PROFILE PAGE ONLY
+     * Setup PIN for quick access
      */
     async function setupPin(pin) {
         const token = localStorage.getItem(CONFIG.TOKEN_KEY);
         if (!token) {
+            console.error('[MobileAuth] No token for PIN setup');
             alert('Please login first');
             return false;
         }
 
         try {
+            console.log('[MobileAuth] Setting up PIN...');
+            
             const response = await fetch(CONFIG.API_BASE_URL + '/pin/setup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({
                     token: token,
@@ -342,12 +349,14 @@
             });
 
             const data = await response.json();
+            console.log('[MobileAuth] PIN setup response:', data);
             
             if (response.ok) {
                 localStorage.setItem(CONFIG.PIN_ENABLED_KEY, 'true');
+                console.log('[MobileAuth] PIN setup successful');
                 return true;
             } else {
-                console.error('PIN setup failed:', data.message);
+                console.error('[MobileAuth] PIN setup failed:', data.message || data.error);
                 return false;
             }
         } catch (error) {
@@ -369,7 +378,9 @@
             const hiddenInput = document.getElementById('pin-hidden-input');
             if (hiddenInput) {
                 hiddenInput.value = '';
-                hiddenInput.focus();
+                setTimeout(() => {
+                    hiddenInput.focus();
+                }, 100);
             }
             
             // Reset dots
@@ -378,6 +389,10 @@
             // Reset error
             const errorMsg = document.getElementById('pin-error-msg');
             if (errorMsg) errorMsg.style.display = 'none';
+            
+            console.log('[MobileAuth] PIN modal shown');
+        } else {
+            console.error('[MobileAuth] PIN modal not found in DOM');
         }
     }
 
@@ -391,7 +406,6 @@
             modal.classList.remove('active');
         }
         
-        // Clear the PIN input
         const hiddenInput = document.getElementById('pin-hidden-input');
         if (hiddenInput) hiddenInput.value = '';
         
@@ -403,14 +417,20 @@
      */
     async function verifyPin(pin) {
         const token = localStorage.getItem(CONFIG.TOKEN_KEY);
-        if (!token) return false;
+        if (!token) {
+            console.error('[MobileAuth] No token for PIN verification');
+            return false;
+        }
 
         try {
+            console.log('[MobileAuth] Verifying PIN...');
+            
             const response = await fetch(CONFIG.API_BASE_URL + '/pin/verify', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({
                     token: token,
@@ -419,7 +439,15 @@
             });
 
             const data = await response.json();
-            return data.valid;
+            console.log('[MobileAuth] PIN verify response:', data);
+            
+            if (data.valid) {
+                console.log('[MobileAuth] PIN verified successfully');
+                return true;
+            } else {
+                console.log('[MobileAuth] PIN invalid:', data.message);
+                return false;
+            }
         } catch (error) {
             console.error('[MobileAuth] PIN verification error:', error);
             return false;
@@ -427,15 +455,7 @@
     }
 
     /**
-     * Ensure PIN modal exists in DOM
-     */
-    function ensurePinModal() {
-        // PIN modal is included via blade component
-        // This function is kept for backwards compatibility
-    }
-
-    /**
-     * Submit PIN for verification (called from PIN modal)
+     * Submit PIN for verification
      */
     async function submitPin() {
         const hiddenInput = document.getElementById('pin-hidden-input');
@@ -446,6 +466,7 @@
             return;
         }
 
+        console.log('[MobileAuth] Submitting PIN...');
         const isValid = await verifyPin(pin);
         
         if (isValid) {
@@ -454,13 +475,13 @@
             
             // Redirect to stored target URL or reload
             if (window.targetAfterPin) {
+                console.log('[MobileAuth] PIN verified, redirecting to:', window.targetAfterPin);
                 window.location.replace(window.targetAfterPin);
             } else {
                 window.location.reload();
             }
         } else {
             showPinError('Invalid PIN. Try again.');
-            // Clear and focus
             if (hiddenInput) {
                 hiddenInput.value = '';
                 hiddenInput.focus();
@@ -485,8 +506,8 @@
      * Update PIN dots display
      */
     function updatePinDots(pin) {
-        const dots = document.querySelectorAll('.pin-dot');
-        if (!dots) return;
+        const dots = document.querySelectorAll('#pin-modal .pin-dot');
+        if (!dots.length) return;
         
         dots.forEach((dot, index) => {
             dot.classList.remove('filled', 'active');
@@ -506,12 +527,12 @@
         
         if (token) {
             try {
-                // Revoke token on server
                 await fetch(CONFIG.API_BASE_URL + '/token/revoke', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': getCsrfToken(),
+                        'Accept': 'application/json',
                     },
                     body: JSON.stringify({ token: token }),
                 });
@@ -522,8 +543,6 @@
 
         clearStoredAuth();
         hidePinModal();
-        
-        // Redirect to home
         window.location.href = '/';
     }
 
@@ -531,7 +550,7 @@
      * Update UI for logged in user
      */
     function updateUIForLoggedInUser(user, userType) {
-        console.log('[MobileAuth] User logged in:', user.name, 'Type:', userType);
+        console.log('[MobileAuth] User logged in:', user?.name, 'Type:', userType);
     }
 
     /**
@@ -543,14 +562,14 @@
     }
 
     /**
-     * Debug function to check current status
+     * Debug function
      */
     function debugStatus() {
         console.log('[MobileAuth] Debug Status:');
+        console.log('  - Protocol:', window.location.protocol);
         console.log('  - isMobileApp:', isMobileApp());
         console.log('  - Token exists:', !!localStorage.getItem(CONFIG.TOKEN_KEY));
         console.log('  - User Type:', localStorage.getItem(CONFIG.USER_TYPE_KEY));
-        console.log('  - Device ID:', localStorage.getItem(CONFIG.DEVICE_ID_KEY));
         console.log('  - PIN Enabled:', localStorage.getItem(CONFIG.PIN_ENABLED_KEY));
         console.log('  - Current Path:', window.location.pathname);
         
@@ -558,7 +577,7 @@
     }
     
     /**
-     * Create and show debug panel
+     * Show debug panel
      */
     function showDebugPanel() {
         let panel = document.getElementById('mobile-auth-debug');
@@ -580,7 +599,6 @@
                 z-index: 99999;
                 max-height: 200px;
                 overflow-y: auto;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             `;
             document.body.appendChild(panel);
         }
@@ -590,11 +608,10 @@
         
         panel.innerHTML = `
             <div style="margin-bottom: 10px; font-weight: bold; color: #ff0;">📱 Mobile Auth Debug</div>
+            <div>Protocol: ${window.location.protocol}</div>
             <div>isMobileApp: ${isMobileApp()}</div>
-            <div>User Agent: ${window.navigator?.userAgent?.substring(0, 50)}...</div>
             <div>Token: ${tokenPreview}</div>
             <div>User Type: ${localStorage.getItem(CONFIG.USER_TYPE_KEY) || 'none'}</div>
-            <div>Device ID: ${(localStorage.getItem(CONFIG.DEVICE_ID_KEY) || 'none').substring(0, 20)}...</div>
             <div>PIN Enabled: ${localStorage.getItem(CONFIG.PIN_ENABLED_KEY) || 'false'}</div>
             <div>Current Path: ${window.location.pathname}</div>
             <div style="margin-top: 10px;">
@@ -603,9 +620,6 @@
         `;
     }
     
-    /**
-     * Hide debug panel
-     */
     function hideDebugPanel() {
         const panel = document.getElementById('mobile-auth-debug');
         if (panel) panel.remove();
@@ -630,21 +644,21 @@
         isPinVerified: () => pinVerified,
     };
 
-    // Auto-initialize when DOM is ready
+    // Auto-initialize
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
     
-    // Auto-show debug panel in mobile for first 10 seconds
+    // Show debug panel in mobile
     if (isMobileApp()) {
         setTimeout(() => {
             showDebugPanel();
-        }, 1000);
+        }, 500);
         
         setTimeout(() => {
             hideDebugPanel();
-        }, 11000);
+        }, 10000);
     }
 })();
