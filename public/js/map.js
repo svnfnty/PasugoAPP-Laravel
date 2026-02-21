@@ -28,8 +28,9 @@
     // ── Echo / Reverb setup ──────────────────────────────────
     // Determine if we should use TLS based on the current page protocol or host
     const isSecure = window.location.protocol === 'https:' || REVERB_HOST.includes('railway.app');
-    const wsPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8081);
-    const wssPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8081);
+
+    // On Railway, we must use 443 for WSS, ignoring the internal REVERB_PORT
+    const port = isSecure ? 443 : (REVERB_PORT || 8081);
 
     // Connection state management
     let connectionState = 'connecting';
@@ -41,11 +42,10 @@
         broadcaster: 'reverb',
         key: REVERB_KEY,
         wsHost: REVERB_HOST,
-        wsPort: wsPort,
-        wssPort: wssPort,
+        wsPort: port,
+        wssPort: port,
         forceTLS: isSecure,
-        enabledTransports: isSecure ? ['wss'] : ['ws', 'wss'],
-        // Add connection timeout and activity timeout
+        enabledTransports: ['ws', 'wss'],
         activityTimeout: 30000,
         pongTimeout: 10000,
     });
@@ -646,9 +646,13 @@
 
     // Safe channel subscription with error handling
     function safeChannelSubscribe(channelName, eventName, callback) {
+        console.log(`[WebSocket] Subscribing to ${channelName} for event ${eventName}`);
         try {
             const channel = echo.channel(channelName);
-            channel.listen(eventName, callback);
+            channel.listen(eventName, (data) => {
+                console.log(`[WebSocket] Event ${eventName} received on ${channelName}:`, data);
+                callback(data);
+            });
 
             // Monitor subscription errors
             channel.error((error) => {
@@ -1024,14 +1028,23 @@
     // ══════════════════════════════════════════════════════════
 
     safeChannelSubscribe('chat.client.' + CLIENT_ID, '.message.sent', function (data) {
-        if (data.senderType === 'rider' && selectedRiderId == data.senderId) {
-            appendMessage(data.message, 'received');
+        console.log(`[Chat] Incoming message for client ${CLIENT_ID}:`, data);
+        if (data.senderType === 'rider') {
+            if (!selectedRiderId || selectedRiderId == data.senderId) {
+                if (!selectedRiderId) selectedRiderId = data.senderId;
+                appendMessage(data.message, 'received');
 
-            // If mission completed, reload to clear active states
-            if (data.message.indexOf('🏁 MISSION COMPLETED') !== -1) {
-                setTimeout(function () {
-                    location.reload();
-                }, 3000);
+                // Auto-open chat if it's hidden
+                const chatOverlay = document.getElementById('chat-overlay');
+                if (chatOverlay && !chatOverlay.classList.contains('active')) {
+                    openChat();
+                }
+
+                if (data.message.indexOf('🏁 MISSION COMPLETED') !== -1) {
+                    setTimeout(function () { location.reload(); }, 3000);
+                }
+            } else {
+                console.warn(`[Chat] Mismatch: sender ${data.senderId} vs selected ${selectedRiderId}`);
             }
         }
     });
