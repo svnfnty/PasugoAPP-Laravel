@@ -9,6 +9,13 @@
     encode zstd gzip
 
     # Proxy WebSocket requests to Reverb
+    @reverb {
+        path /app*
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    
+    # Just catch /app* to be safe with all types of Pusher traffic
     handle /app* {
         reverse_proxy 127.0.0.1:8081 {
             header_up Host {host}

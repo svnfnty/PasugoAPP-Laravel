@@ -18,11 +18,15 @@ echo "REVERB_APP_KEY: " . substr($reverbKey, 0, 4) . "...\n";
 
 // 2. Start Reverb in the background correctly
 echo "Starting Reverb on 0.0.0.0:8081...\n";
-pclose(popen("php artisan reverb:start --host=0.0.0.0 --port=8081 --debug > reverb.log 2>&1 &", "r"));
+// Pass LOG_CHANNEL=stderr to the sub-process
+$cmd = "export LOG_CHANNEL=stderr && php artisan reverb:start --host=0.0.0.0 --port=8081 --debug";
+exec("($cmd >> reverb.log 2>&1) & echo $!", $output);
+$pid = $output[0] ?? 'unknown';
+echo "Reverb started with PID: $pid (Logs in reverb.log)\n";
 
-// 3. Start Reverb Monitor in the background correctly
+// 3. Start Reverb Monitor in the background
 echo "Starting Log Monitor...\n";
-pclose(popen("php start_reverb_monitor.php &", "r"));
+exec("php start_reverb_monitor.php > /dev/null 2>&1 &");
 
 // 4. Start FrankenPHP Gateway (This must be last as it blocks)
 echo "Starting FrankenPHP Gateway...\n";

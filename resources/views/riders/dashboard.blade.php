@@ -125,21 +125,39 @@
             statusBar.style.display = 'none';
         });
 
-        echo.connector.pusher.connection.bind('disconnected', () => {
-            console.log('[WebSocket] Disconnected');
-            logEvent('SYSTEM: WebSocket Disconnected');
-            statusBar.style.background = '#fee2e2';
-            statusBar.style.color = '#991b1b';
-            statusBar.innerText = '⚠️ WebSocket Disconnected. Trying to reconnect...';
+        echo.connector.pusher.connection.bind('connecting', () => {
+            console.log('[WebSocket] Connecting...');
+            logEvent('SYSTEM: WebSocket Connecting...');
+            statusBar.style.background = '#fef3c7';
+            statusBar.style.color = '#92400e';
+            statusBar.innerText = '📡 WebSocket Connecting...';
             statusBar.style.display = 'block';
         });
 
-        echo.connector.pusher.connection.bind('error', (err) => {
-            console.error('[WebSocket] Connection Error:', err);
-            logEvent('ERROR: WebSocket Connection Error', err);
-            statusBar.style.background = '#fef3c7';
-            statusBar.style.color = '#92400e';
-            statusBar.innerText = '⚠️ WebSocket Connection Error. Please refresh if this persists.';
+        echo.connector.pusher.connection.bind('unavailable', () => {
+            console.log('[WebSocket] Unavailable');
+            logEvent('SYSTEM: WebSocket Unavailable');
+            statusBar.style.background = '#fee2e2';
+            statusBar.style.color = '#991b1b';
+            statusBar.innerText = '❌ WebSocket Unavailable. Waiting to retry...';
+            statusBar.style.display = 'block';
+        });
+
+        echo.connector.pusher.connection.bind('failed', () => {
+            console.log('[WebSocket] Failed');
+            logEvent('SYSTEM: WebSocket Failed');
+            statusBar.style.background = '#fee2e2';
+            statusBar.style.color = '#991b1b';
+            statusBar.innerText = '❌ WebSocket Connection Failed. Please refresh.';
+            statusBar.style.display = 'block';
+        });
+
+        echo.connector.pusher.connection.bind('disconnected', () => {
+            console.log('[WebSocket] Disconnected');
+            logEvent('SYSTEM: WebSocket Disconnected');
+            statusBar.style.background = '#f1f5f9';
+            statusBar.style.color = '#475569';
+            statusBar.innerText = '⚠️ WebSocket Disconnected.';
             statusBar.style.display = 'block';
         });
 

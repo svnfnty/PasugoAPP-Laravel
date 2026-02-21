@@ -15,10 +15,15 @@
     // ── Read server data from <body> data attributes ──────────
     const body = document.body;
     const REVERB_KEY = body.dataset.reverbKey;
-    const REVERB_HOST = body.dataset.reverbHost;
+    const rawHost = body.dataset.reverbHost;
     const REVERB_PORT = body.dataset.reverbPort;
     const CSRF_TOKEN = body.dataset.csrf;
     const CLIENT_ID = body.dataset.clientId || 'guest';
+
+    // Fallback if REVERB_HOST is missing or local
+    const REVERB_HOST = (rawHost && rawHost !== '127.0.0.1' && rawHost !== 'localhost')
+        ? rawHost
+        : window.location.hostname;
 
     // ── Echo / Reverb setup ──────────────────────────────────
     // Determine if we should use TLS based on the current page protocol or host
@@ -44,6 +49,8 @@
         activityTimeout: 30000,
         pongTimeout: 10000,
     });
+
+    console.log(`[WebSocket] Echo initialized for host: ${REVERB_HOST}`);
 
     // Connection status monitoring
     function updateConnectionStatus(status, message) {
