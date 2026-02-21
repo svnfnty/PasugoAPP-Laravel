@@ -159,18 +159,33 @@
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
     // WebSocket Configuration with proper protocol detection
-    const wsHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
-    const wsPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
+    const configHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
+    const configPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
     
+    // Fallback if REVERB_HOST is missing or local
+    const wsHost = (configHost && configHost !== '127.0.0.1' && configHost !== 'localhost') 
+        ? configHost 
+        : window.location.hostname;
+
     // Determine if we should use TLS based on the current page protocol or host
     const isSecure = window.location.protocol === 'https:' || wsHost.includes('railway.app');
-    const port = wsPort || (isSecure ? 443 : 8081);
+    const port = isSecure ? 443 : (configPort || 8081);
     
     // Connection state management
     let connectionState = 'connecting';
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 10;
     const reconnectDelay = 2000;
+
+    // --- DEBUG CONSOLE LOGGING ---
+    function logEvent(msg, data) {
+        const logs = document.getElementById('debug-logs');
+        if (!logs) return;
+        const entry = document.createElement('div');
+        entry.style.marginBottom = '2px';
+        entry.innerHTML = `<span style="color: #94a3b8">[${new Date().toLocaleTimeString()}]</span> ${msg} ${data ? JSON.stringify(data) : ''}`;
+        logs.prepend(entry);
+    }
 
     const echo = new Echo({
         broadcaster: 'reverb',
@@ -179,7 +194,7 @@
         wsPort: isSecure ? 443 : port,
         wssPort: isSecure ? 443 : port,
         forceTLS: isSecure,
-        enabledTransports: isSecure ? ['wss'] : ['ws', 'wss'],
+        enabledTransports: ['ws', 'wss'],
         activityTimeout: 30000,
         pongTimeout: 10000,
     });
@@ -188,6 +203,7 @@
     function updateConnectionStatus(status, message) {
         connectionState = status;
         console.log(`[Rider WebSocket] ${status}: ${message}`);
+        logEvent(`STATUS: ${status}`, message);
         
         // Dispatch custom event for UI updates
         window.dispatchEvent(new CustomEvent('rider-websocket-status', { 
@@ -199,6 +215,7 @@
     function handleConnectionError(error) {
         console.error('[Rider WebSocket] Connection error:', error);
         updateConnectionStatus('error', 'Connection failed, attempting to reconnect...');
+        logEvent('ERROR: Connection failed', error);
         
         if (reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
@@ -218,10 +235,12 @@
     echo.connector.pusher.connection.bind('connected', () => {
         reconnectAttempts = 0;
         updateConnectionStatus('connected', 'WebSocket connected successfully');
+        logEvent('SYSTEM: WebSocket Connected');
     });
 
     echo.connector.pusher.connection.bind('disconnected', () => {
         updateConnectionStatus('disconnected', 'WebSocket disconnected');
+        logEvent('SYSTEM: WebSocket Disconnected');
     });
 
     echo.connector.pusher.connection.bind('error', (error) => {
@@ -233,17 +252,23 @@
 
     // Safe channel subscription with error handling
     function safeChannelSubscribe(channelName, eventName, callback) {
+        logEvent(`SYSTEM: Subscribing to ${channelName}...`);
         try {
             const channel = echo.channel(channelName);
-            channel.listen(eventName, callback);
+            channel.listen(eventName, (data) => {
+                logEvent(`EVENT: ${eventName} received`, data);
+                callback(data);
+            });
             
             channel.error((error) => {
                 console.error(`[Rider WebSocket] Channel ${channelName} error:`, error);
+                logEvent(`ERROR: Channel ${channelName} failed`, error);
             });
             
             return channel;
         } catch (error) {
             console.error(`[Rider WebSocket] Failed to subscribe to ${channelName}:`, error);
+            logEvent(`ERROR: Subscription to ${channelName} failed`, error);
             return null;
         }
     }
@@ -820,5 +845,14 @@
             <button onclick="closeCancelConfirm()" class="w-full py-4 rounded-3xl font-black text-[10px] text-slate-400 uppercase tracking-widest transition-all hover:bg-slate-50">Go Back</button>
         </div>
     </div>
+</div>
+
+<!-- FLOATING DEBUG CONSOLE - MOVED TO TOP FOR VISIBILITY -->
+<div id="debug-console" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 500px; background: #0f172a; color: #4ade80; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 0.85rem; height: 180px; overflow-y: auto; z-index: 10000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 2px solid #334155;">
+    <div style="position: sticky; top: 0; background: #1e293b; color: #f8fafc; padding: 10px 15px; font-weight: bold; border-bottom: 2px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+        <span>🚀 FLEET DEBUG MONITOR</span>
+        <button onclick="location.reload()" style="background: #4f46e5; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Refresh Page</button>
+    </div>
+    <div id="debug-logs" style="padding: 15px;">Initializing system...</div>
 </div>
 @endsection

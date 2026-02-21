@@ -287,9 +287,12 @@
     </div>
 
     <!-- FLOATING MAP DEBUG -->
-    <div id="map-debug-console" style="position: fixed; top: 80px; left: 10px; width: 220px; background: #0f172a; color: #38bdf8; border-radius: 8px; font-family: monospace; font-size: 0.65rem; height: 120px; overflow-y: auto; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid #334155; pointer-events: auto;">
-        <div style="position: sticky; top: 0; background: #1e293b; color: #94a3b8; padding: 4px 8px; font-weight: bold; border-bottom: 1px solid #334155;">MAP WS LOGS</div>
-        <div id="map-debug-logs" style="padding: 6px;">Waiting...</div>
+    <div id="map-debug-console" style="position: fixed; top: 15px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: #0f172a; color: #4ade80; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 0.75rem; height: 140px; overflow-y: auto; z-index: 10001; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 2px solid #334155; pointer-events: auto;">
+        <div style="position: sticky; top: 0; background: #1e293b; color: #f8fafc; padding: 6px 12px; font-weight: bold; border-bottom: 2px solid #334155; display: flex; justify-content: space-between;">
+            <span>📍 MAP DEBUG MONITOR</span>
+            <span style="font-size: 0.6rem; color: #94a3b8;">{{ Auth::guard('client')->user()->name ?? 'Guest' }}</span>
+        </div>
+        <div id="map-debug-logs" style="padding: 10px;">Waiting...</div>
     </div>
 
 
