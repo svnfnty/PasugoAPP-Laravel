@@ -1,4 +1,5 @@
 {
+    debug
     frankenphp
     order php_server before reverse_proxy
 }
