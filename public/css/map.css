@@ -1477,15 +1477,6 @@ body {
     border-color: rgba(245, 158, 11, 0.3);
 }
 
-.landmark-marker {
-    background: var(--surface);
-    padding: 6px 10px;
-    border-radius: 10px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-light);
-    font-size: 16px;
-    white-space: nowrap;
-}
 
 /* User location marker */
 .user-marker {

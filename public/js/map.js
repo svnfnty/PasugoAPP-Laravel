@@ -321,29 +321,6 @@
 
 
     // ══════════════════════════════════════════════════════════
-    //  LANDMARKS
-    // ══════════════════════════════════════════════════════════
-
-    const landmarks = [
-        { name: 'Jollibee Gingoog', pos: [8.4930, 125.0633], icon: '🍔' },
-        { name: 'Gaisano Gingoog', pos: [8.4931, 125.0647], icon: '🏬' },
-        { name: 'City Public Market', pos: [8.4920, 125.0639], icon: '🏪' },
-        { name: 'Gingoog City Hall', pos: [8.4853, 125.0621], icon: '🏛️' },
-    ];
-
-    landmarks.forEach(function (l) {
-        L.marker(l.pos, {
-            icon: L.divIcon({
-                html: '<div class="landmark-marker">' + l.icon + '</div>',
-                className: '',
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
-            })
-        }).addTo(map).bindTooltip(l.name, { direction: 'top', offset: [0, -12] });
-    });
-
-
-    // ══════════════════════════════════════════════════════════
     //  MAP LAYERS TOGGLE
     // ══════════════════════════════════════════════════════════
 
@@ -528,16 +505,7 @@
         var list = document.getElementById(listId);
 
         if (!results || results.length === 0) {
-            // Also show landmarks as suggestions
-            var html = '';
-            landmarks.forEach(function (l) {
-                html += '<div class="suggestion-item" onclick="window._pasugo.selectSuggestion(\'' +
-                    fieldId + '\', ' + l.pos[0] + ', ' + l.pos[1] + ', \'' + escapeHtml(l.name) + '\')">' +
-                    '<div class="suggestion-icon">' + l.icon + '</div>' +
-                    '<div><div class="suggestion-text">' + escapeHtml(l.name) + '</div>' +
-                    '<div class="suggestion-sub">Gingoog City</div></div></div>';
-            });
-            list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--text-tertiary);font-size:13px;">No results found</div>';
+            list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-tertiary);font-size:13px;">No results found</div>';
             panel.style.display = 'block';
             return;
         }
