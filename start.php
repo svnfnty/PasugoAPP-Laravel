@@ -18,15 +18,13 @@ echo "REVERB_APP_KEY: " . substr($reverbKey, 0, 4) . "...\n";
 
 // 2. Start Reverb in the background correctly
 echo "Starting Reverb on 0.0.0.0:8081...\n";
-// Pass LOG_CHANNEL=stderr to the sub-process
-$cmd = "export LOG_CHANNEL=stderr && php artisan reverb:start --host=0.0.0.0 --port=8081 --debug";
-exec("($cmd >> reverb.log 2>&1) & echo $!", $output);
-$pid = $output[0] ?? 'unknown';
-echo "Reverb started with PID: $pid (Logs in reverb.log)\n";
+// We use a simpler direct redirection to /dev/stderr to ensure logs appear in Railway
+exec("php artisan reverb:start --host=0.0.0.0 --port=8081 --debug > /proc/1/fd/2 2>&1 &");
 
-// 3. Start Reverb Monitor in the background
-echo "Starting Log Monitor...\n";
-exec("php start_reverb_monitor.php > /dev/null 2>&1 &");
+// 3. Briefly wait and check if Reverb is alive
+usleep(500000);
+
+echo "Reverb process spawned. Logging to Container Stderr.\n";
 
 // 4. Start FrankenPHP Gateway (This must be last as it blocks)
 echo "Starting FrankenPHP Gateway...\n";

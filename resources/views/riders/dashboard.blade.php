@@ -60,13 +60,13 @@
             </div>
         </div>
 
-        <!-- FLOATING DEBUG CONSOLE -->
-        <div id="debug-console" style="position: fixed; bottom: 20px; right: 20px; width: 350px; background: #1e293b; color: #38bdf8; border-radius: 12px; font-family: monospace; font-size: 0.8rem; height: 200px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid #334155;">
-            <div style="position: sticky; top: 0; background: #0f172a; color: #94a3b8; padding: 8px 12px; font-weight: bold; border-bottom: 1px solid #334155; display: flex; justify-content: space-between;">
-                <span>WS DEBUG LOGS</span>
-                <span style="color: #4ade80;">● LIVE</span>
+        <!-- FLOATING DEBUG CONSOLE - MOVED TO TOP FOR VISIBILITY -->
+        <div id="debug-console" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 500px; background: #0f172a; color: #4ade80; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 0.85rem; height: 250px; overflow-y: auto; z-index: 10000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 2px solid #334155;">
+            <div style="position: sticky; top: 0; background: #1e293b; color: #f8fafc; padding: 10px 15px; font-weight: bold; border-bottom: 2px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                <span>🚀 REVERB DEBUG MONITOR</span>
+                <button onclick="location.reload()" style="background: #4f46e5; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Refresh Page</button>
             </div>
-            <div id="debug-logs" style="padding: 12px;">Waiting for connection...</div>
+            <div id="debug-logs" style="padding: 15px;">Initializing system...</div>
         </div>
     </div>
 
