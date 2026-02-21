@@ -32,7 +32,7 @@
 </div>
 
 <!-- Stats Grid -->
-<div class="flex gap-3 mb-8">
+<div class="flex gap-3 mb-6">
     <div class="stat-pill border-orange-100 bg-orange-50/30">
         <div class="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Income</div>
         <div class="text-lg font-black tracking-tighter text-orange-600">₱{{ number_format($netIncome, 0) }}</div>
@@ -46,6 +46,9 @@
         <div class="text-lg font-black tracking-tighter text-slate-800">Elite</div>
     </div>
 </div>
+
+<!-- PIN Security Settings -->
+@include('components.pin-setup')
 
 <!-- Incoming Requests (Live) -->
 <div id="realtime-requests-container" class="mb-4">

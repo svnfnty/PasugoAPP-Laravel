@@ -18,7 +18,7 @@
 </div>
 
 <!-- Quick Stats -->
-<div class="flex gap-3 mb-8">
+<div class="flex gap-3 mb-6">
     <div class="client-stat-pill bg-orange-50 border-orange-100">
         <div class="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Spent</div>
         <div class="text-xl font-black tracking-tighter text-orange-600">₱{{ number_format($totalSpent, 0) }}</div>
@@ -28,6 +28,9 @@
         <div class="text-xl font-black tracking-tighter text-slate-800">{{ $orderCount }}</div>
     </div>
 </div>
+
+<!-- PIN Security Settings -->
+@include('components.pin-setup')
  
 @php
     $hasActiveMission = $orders->whereIn('status', ['pending', 'mission_accepted', 'accepted', 'picked_up'])->first();
