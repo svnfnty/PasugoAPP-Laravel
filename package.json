@@ -4,12 +4,12 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "start": "concurrently \"php artisan serve --host=127.0.0.1 --port=8000\" \"php artisan reverb:start --host=127.0.0.1 --port=8081\" \"node proxy.cjs\""
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.11.0",
-        "concurrently": "^9.0.1",
         "laravel-echo": "^2.3.0",
         "laravel-vite-plugin": "^2.0.0",
         "pusher-js": "^8.4.0",
@@ -21,6 +21,7 @@
         "@capacitor/cli": "^8.1.0",
         "@capacitor/core": "^8.1.0",
         "@capacitor/geolocation": "^8.1.0",
+        "concurrently": "^9.0.1",
         "http-proxy": "^1.18.1"
     }
 }
