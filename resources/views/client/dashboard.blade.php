@@ -10,6 +10,10 @@
 <!-- Header Section -->
 <div class="mb-10 px-2">
     <h1 class="text-3xl font-black tracking-tighter text-slate-900 leading-tight">My Profile</h1>
+    <div id="realtime-status-pill" class="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-slate-100 rounded-full border border-slate-200 transition-all duration-500">
+        <span id="realtime-status-dot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+        <span id="realtime-status-text" class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">Initializing...</span>
+    </div>
     <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mt-2">Verified PasugoAPP Client</p>
 </div>
 
@@ -158,30 +162,91 @@
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
     // WebSocket Configuration with proper protocol detection
-    const wsHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
-    const wsPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
+    const configHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
+    const configPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
     
+    // Fallback if REVERB_HOST is missing or local
+    const wsHost = (configHost && configHost !== '127.0.0.1' && configHost !== 'localhost') 
+        ? configHost 
+        : window.location.hostname;
+
     // Determine if we should use TLS based on the current page protocol or host
     const isSecure = window.location.protocol === 'https:' || wsHost.includes('railway.app');
-    const port = wsPort || (isSecure ? 443 : 8081);
+    const port = isSecure ? 443 : (configPort || 8081);
+
+    // Connection state management
+    let connectionState = 'connecting';
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 10;
+    const reconnectDelay = 2000;
 
     const echo = new Echo({
         broadcaster: 'reverb',
         key: '{{ config('broadcasting.connections.reverb.key') }}',
         wsHost: wsHost,
-        wsPort: isSecure ? 443 : port,
-        wssPort: isSecure ? 443 : port,
+        wsPort: port,
+        wssPort: port,
         forceTLS: isSecure,
-        enabledTransports: isSecure ? ['wss'] : ['ws', 'wss'],
+        enabledTransports: ['ws', 'wss'],
         activityTimeout: 30000,
         pongTimeout: 10000,
+    });
+
+    // Connection status monitoring
+    function updateConnectionStatus(status, message) {
+        connectionState = status;
+        console.log(`[Client WebSocket] ${status}: ${message}`);
+        
+        const pill = document.getElementById('realtime-status-pill');
+        const dot = document.getElementById('realtime-status-dot');
+        const text = document.getElementById('realtime-status-text');
+        
+        if (pill && dot && text) {
+            switch(status) {
+                case 'connected':
+                    pill.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100 transition-all duration-500';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+                    text.className = 'text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600';
+                    text.innerText = 'Connected & Live';
+                    break;
+                case 'connecting':
+                case 'reconnecting':
+                    pill.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-amber-50 rounded-full border border-amber-100 transition-all duration-500';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse';
+                    text.className = 'text-[9px] font-black uppercase tracking-[0.15em] text-amber-600';
+                    text.innerText = 'Connecting...';
+                    break;
+                case 'error':
+                case 'failed':
+                case 'disconnected':
+                    pill.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-rose-50 rounded-full border border-rose-100 transition-all duration-500';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-rose-500';
+                    text.className = 'text-[9px] font-black uppercase tracking-[0.15em] text-rose-600';
+                    text.innerText = 'Connection Lost';
+                    break;
+            }
+        }
+    }
+
+    echo.connector.pusher.connection.bind('connected', () => {
+        reconnectAttempts = 0;
+        updateConnectionStatus('connected', 'Connected');
+    });
+
+    echo.connector.pusher.connection.bind('disconnected', () => {
+        updateConnectionStatus('disconnected', 'Disconnected');
+    });
+
+    echo.connector.pusher.connection.bind('error', (err) => {
+        console.error('[WebSocket] Connection error:', err);
+        updateConnectionStatus('error', 'Connection Error');
     });
 
     const clientId = {{ auth()->guard('client')->id() }};
     let activeRiderId = null;
 
     // Restore mission on load
-    const activeMission = @json($activeMission);
+    let activeMission = @json($activeMission);
     
     window.onload = () => {
         if (activeMission) {
@@ -213,9 +278,12 @@
             }
         });
 
+    console.log('[WebSocket] Subscribing to chat.client.' + clientId);
     echo.channel('chat.client.' + clientId)
         .listen('.message.sent', (data) => {
-            if (data.senderType === 'rider' && activeRiderId == data.senderId) {
+            console.log('[WebSocket] Chat message received:', data);
+            if (data.senderType === 'rider' && (!activeRiderId || activeRiderId == data.senderId)) {
+                if (!activeRiderId) activeRiderId = data.senderId;
                 appendClientMessage(data.message, 'rider', data.type, data.locationData);
                 
                 // Auto-open if closed
