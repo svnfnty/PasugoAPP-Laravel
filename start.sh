@@ -27,5 +27,5 @@ php artisan reverb:start --host=127.0.0.1 --port=8081 &
 
 # Start Node.js Proxy to bridge the public $PORT to our internal services
 echo "Starting Node.js Proxy on port $PORT..."
-node proxy.js
+node proxy.cjs
 
