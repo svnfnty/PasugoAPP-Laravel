@@ -244,13 +244,12 @@ class TokenController extends Controller
     }
 
     /**
-     * Disable PIN for a persistent login.
+     * Disable/remove PIN for a persistent login.
      */
     public function disablePin(Request $request)
     {
         $request->validate([
             'token' => 'required|string|size:64',
-            'pin' => 'required|string|size:4',
         ]);
 
         $tokenHash = hash('sha256', $request->token);
@@ -259,15 +258,15 @@ class TokenController extends Controller
             ->byToken($tokenHash)
             ->first();
 
-        if (!$persistentLogin || !$persistentLogin->pin_enabled) {
+        if (!$persistentLogin) {
+            return response()->json(['error' => 'Invalid token'], 401);
+        }
+
+        if (!$persistentLogin->pin_enabled) {
             return response()->json(['error' => 'PIN not enabled'], 400);
         }
 
-        // Verify PIN before disabling
-        if (!Hash::check($request->pin, $persistentLogin->pin_hash)) {
-            return response()->json(['error' => 'Invalid PIN'], 401);
-        }
-
+        // Remove PIN
         $persistentLogin->update([
             'pin_hash' => null,
             'pin_enabled' => false,
