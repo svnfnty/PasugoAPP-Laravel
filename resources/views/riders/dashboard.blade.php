@@ -39,6 +39,10 @@
 </head>
 <body>
     <div class="container">
+        <div id="ws-status-bar" style="background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; text-align: center; font-weight: 600; font-size: 0.9rem;">
+            ⚠️ WebSocket Disconnected. Trying to reconnect...
+        </div>
+
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
             <div>
                 <h1>Rider Dashboard</h1>
@@ -54,6 +58,11 @@
                 <div style="font-size: 3rem; margin-bottom: 16px;">📭</div>
                 <p>No active requests. Stay tuned!</p>
             </div>
+        </div>
+
+        <div id="debug-console" style="margin-top: 40px; padding: 20px; background: #1e293b; color: #38bdf8; border-radius: 12px; font-family: monospace; font-size: 0.8rem; height: 150px; overflow-y: auto;">
+            <div style="color: #94a3b8; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">DEBUG CONSOLE</div>
+            <div id="debug-logs">Waiting for events...</div>
         </div>
     </div>
 
@@ -91,11 +100,47 @@
             pongTimeout: 10000,
         });
 
+        function logEvent(msg, data) {
+            const logs = document.getElementById('debug-logs');
+            const entry = document.createElement('div');
+            entry.style.marginBottom = '4px';
+            entry.innerHTML = `<span style="color: #94a3b8">[${new Date().toLocaleTimeString()}]</span> ${msg} ${data ? JSON.stringify(data) : ''}`;
+            logs.prepend(entry);
+        }
+
         echo.channel('rider.' + riderId)
             .listen('.rider.ordered', (data) => {
                 console.log('New Order Received:', data);
+                logEvent('EVENT: rider.ordered', data);
                 addRequestCard(data);
             });
+
+        // Connection Status Monitoring
+        const statusBar = document.getElementById('ws-status-bar');
+        
+        echo.connector.pusher.connection.bind('connected', () => {
+            console.log('[WebSocket] Connected');
+            logEvent('SYSTEM: WebSocket Connected');
+            statusBar.style.display = 'none';
+        });
+
+        echo.connector.pusher.connection.bind('disconnected', () => {
+            console.log('[WebSocket] Disconnected');
+            logEvent('SYSTEM: WebSocket Disconnected');
+            statusBar.style.background = '#fee2e2';
+            statusBar.style.color = '#991b1b';
+            statusBar.innerText = '⚠️ WebSocket Disconnected. Trying to reconnect...';
+            statusBar.style.display = 'block';
+        });
+
+        echo.connector.pusher.connection.bind('error', (err) => {
+            console.error('[WebSocket] Connection Error:', err);
+            logEvent('ERROR: WebSocket Connection Error', err);
+            statusBar.style.background = '#fef3c7';
+            statusBar.style.color = '#92400e';
+            statusBar.innerText = '⚠️ WebSocket Connection Error. Please refresh if this persists.';
+            statusBar.style.display = 'block';
+        });
 
         function addRequestCard(data) {
             const container = document.getElementById('requests-container');

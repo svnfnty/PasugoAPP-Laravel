@@ -283,6 +283,11 @@
                     Confirm & Book Ride
                 </button>
             </div>
+
+            <div id="map-debug-console" style="margin-top: 15px; padding: 10px; background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 0.7rem; max-height: 80px; overflow-y: auto;">
+                <div style="color: #64748b; font-weight: 700; border-bottom: 1px solid #e2e8f0; margin-bottom: 4px;">WS LOGS</div>
+                <div id="map-debug-logs">Waiting...</div>
+            </div>
         </div>
     </div>
 
@@ -377,6 +382,14 @@
                 statusDot.className = `w-2 h-2 rounded-full ${config.dot}`;
                 statusText.textContent = config.text;
                 statusIndicator.className = `flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${config.bg}`;
+                
+                // Add to debug console
+                const debugLogs = document.getElementById('map-debug-logs');
+                if (debugLogs) {
+                    const entry = document.createElement('div');
+                    entry.innerHTML = `<span style="color: #94a3b8">[${new Date().toLocaleTimeString()}]</span> Status: ${status}`;
+                    debugLogs.prepend(entry);
+                }
             }
             
             // Listen for WebSocket status events from map.js
