@@ -60,9 +60,13 @@
             </div>
         </div>
 
-        <div id="debug-console" style="margin-top: 40px; padding: 20px; background: #1e293b; color: #38bdf8; border-radius: 12px; font-family: monospace; font-size: 0.8rem; height: 150px; overflow-y: auto;">
-            <div style="color: #94a3b8; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">DEBUG CONSOLE</div>
-            <div id="debug-logs">Waiting for events...</div>
+        <!-- FLOATING DEBUG CONSOLE -->
+        <div id="debug-console" style="position: fixed; bottom: 20px; right: 20px; width: 350px; background: #1e293b; color: #38bdf8; border-radius: 12px; font-family: monospace; font-size: 0.8rem; height: 200px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid #334155;">
+            <div style="position: sticky; top: 0; background: #0f172a; color: #94a3b8; padding: 8px 12px; font-weight: bold; border-bottom: 1px solid #334155; display: flex; justify-content: space-between;">
+                <span>WS DEBUG LOGS</span>
+                <span style="color: #4ade80;">● LIVE</span>
+            </div>
+            <div id="debug-logs" style="padding: 12px;">Waiting for connection...</div>
         </div>
     </div>
 
