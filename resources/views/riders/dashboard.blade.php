@@ -64,22 +64,29 @@
         const riderName = "{{ auth()->guard('rider')->user()->name }}";
         document.getElementById('rider-name-display').innerText = riderName;
 
-        // WebSocket Configuration with proper protocol detection
-        const wsHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
-        const wsPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
+        // WebSocket Configuration with dynamic host detection
+        const configHost = '{{ config('broadcasting.connections.reverb.client_options.host') ?? config('broadcasting.connections.reverb.options.host') }}';
+        const configPort = '{{ config('broadcasting.connections.reverb.client_options.port') ?? config('broadcasting.connections.reverb.options.port') }}';
         
-        // Determine if we should use TLS based on the current page protocol or host
+        // Use window.location.hostname if config is empty, 127.0.0.1, or localhost
+        const wsHost = (configHost && configHost !== '127.0.0.1' && configHost !== 'localhost') 
+            ? configHost 
+            : window.location.hostname;
+            
+        // Determine if we should use TLS (WSS)
         const isSecure = window.location.protocol === 'https:' || wsHost.includes('railway.app');
-        const port = wsPort || (isSecure ? 443 : 8081);
+        const port = isSecure ? 443 : (configPort || 8081);
+
+        console.log(`[WebSocket] Connecting to ${isSecure ? 'wss' : 'ws'}://${wsHost}:${port}`);
 
         const echo = new Echo({
             broadcaster: 'reverb',
             key: '{{ config('broadcasting.connections.reverb.key') }}',
             wsHost: wsHost,
-            wsPort: isSecure ? 443 : port,
-            wssPort: isSecure ? 443 : port,
+            wsPort: port,
+            wssPort: port,
             forceTLS: isSecure,
-            enabledTransports: isSecure ? ['wss'] : ['ws', 'wss'],
+            enabledTransports: ['ws', 'wss'],
             activityTimeout: 30000,
             pongTimeout: 10000,
         });

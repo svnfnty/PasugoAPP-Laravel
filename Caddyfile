@@ -9,11 +9,19 @@
 
     # Proxy WebSocket requests to Reverb
     handle /app* {
-        reverse_proxy 127.0.0.1:8081
+        reverse_proxy 127.0.0.1:8081 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
     }
 
     # Handle Laravel requests via FrankenPHP
     handle {
         php_server
     }
+
+    # Fallback to index.php for SPA-like routing if needed
+    file_server
 }
