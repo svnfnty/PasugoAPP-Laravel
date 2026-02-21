@@ -98,7 +98,7 @@
     });
 
     // Initial connection attempt
-    updateConnectionStatus('connecting', `Connecting to ${REVERB_HOST}:${isSecure ? wssPort : wsPort} (TLS: ${isSecure})`);
+    updateConnectionStatus('connecting', `Connecting to ${REVERB_HOST}:${port} (TLS: ${isSecure})`);
 
 
     // ══════════════════════════════════════════════════════════
