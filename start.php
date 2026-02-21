@@ -4,6 +4,7 @@ echo "--- Pasugo Bootloader ---\n";
 // 1. Run Migrations
 // 1. Clear Caches and Run Migrations
 echo "Clearing caches...\n";
+putenv('LOG_CHANNEL=stderr');
 passthru("php artisan config:clear");
 passthru("php artisan cache:clear");
 passthru("php artisan route:clear");

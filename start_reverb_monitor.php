@@ -13,7 +13,13 @@ if (!file_exists($logFile)) {
 $handle = fopen($logFile, 'r');
 fseek($handle, 0, SEEK_END);
 
+$counter = 0;
 while (true) {
+    if ($counter % 100 === 0) {
+        echo "[Monitor] Heartbeat: Watching reverb.log...\n";
+    }
+    $counter++;
+
     $line = fgets($handle);
     if ($line !== false) {
         echo "[Reverb] " . $line;

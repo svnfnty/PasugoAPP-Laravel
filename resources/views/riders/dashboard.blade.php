@@ -108,6 +108,7 @@
             logs.prepend(entry);
         }
 
+        logEvent(`SYSTEM: Joining channel: rider.${riderId}`);
         echo.channel('rider.' + riderId)
             .listen('.rider.ordered', (data) => {
                 console.log('New Order Received:', data);
