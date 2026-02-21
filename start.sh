@@ -16,11 +16,17 @@ echo "Running migrations..."
 php artisan migrate --force
 
 
-# Start the actual Laravel Web Server on the Railway $PORT
-echo "Starting web server on port $PORT..."
-php artisan serve --host=0.0.0.0 --port=${PORT:-8080}  &
+# Start the actual Laravel Web Server on internal port 8000
+echo "Starting Laravel web server on port 8000..."
+export PHP_CLI_SERVER_WORKERS=5
+php artisan serve --host=127.0.0.1 --port=8000 &
 
 # Start Laravel Reverb in the background on port 8081
 echo "Starting Laravel Reverb on port 8081..."
-php artisan reverb:start --host=0.0.0.0 --port=8081
+php artisan reverb:start --host=127.0.0.1 --port=8081 &
+
+# Configure and Start Nginx to bridge the public $PORT to our internal services
+echo "Starting Nginx Proxy on port $PORT..."
+sed -i "s/\${PORT}/$PORT/g" nginx.conf
+nginx -c /app/nginx.conf -g "daemon off;"
 
