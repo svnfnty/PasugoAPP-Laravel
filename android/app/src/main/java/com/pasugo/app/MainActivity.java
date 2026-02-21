@@ -34,6 +34,8 @@ public class MainActivity extends BridgeActivity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setDatabaseEnabled(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         // Allow mixed content so HTTP tile-layer URLs load inside HTTPS pages
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
