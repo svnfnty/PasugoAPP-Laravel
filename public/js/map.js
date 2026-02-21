@@ -23,8 +23,8 @@
     // ── Echo / Reverb setup ──────────────────────────────────
     // Determine if we should use TLS based on the current page protocol or host
     const isSecure = window.location.protocol === 'https:' || REVERB_HOST.includes('railway.app');
-    const wsPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8080);
-    const wssPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8080);
+    const wsPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8081);
+    const wssPort = isSecure ? (REVERB_PORT || 443) : (REVERB_PORT || 8081);
 
     // Connection state management
     let connectionState = 'connecting';

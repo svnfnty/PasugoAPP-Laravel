@@ -4,34 +4,34 @@
 return [
 
     /*
-    |--------------------------------------------------------------------------
-    | Default Reverb Server
-    |--------------------------------------------------------------------------
-    |
-    | This option controls the default server used by Reverb to handle
-    | incoming messages as well as broadcasting message to all your
-    | connected clients. At this time only "reverb" is supported.
-    |
-    */
+     |--------------------------------------------------------------------------
+     | Default Reverb Server
+     |--------------------------------------------------------------------------
+     |
+     | This option controls the default server used by Reverb to handle
+     | incoming messages as well as broadcasting message to all your
+     | connected clients. At this time only "reverb" is supported.
+     |
+     */
 
     'default' => env('REVERB_SERVER', 'reverb'),
 
     /*
-    |--------------------------------------------------------------------------
-    | Reverb Servers
-    |--------------------------------------------------------------------------
-    |
-    | Here you may define details for each of the supported Reverb servers.
-    | Each server has its own configuration options that are defined in
-    | the array below. You should ensure all the options are present.
-    |
-    */
+     |--------------------------------------------------------------------------
+     | Reverb Servers
+     |--------------------------------------------------------------------------
+     |
+     | Here you may define details for each of the supported Reverb servers.
+     | Each server has its own configuration options that are defined in
+     | the array below. You should ensure all the options are present.
+     |
+     */
 
     'servers' => [
 
         'reverb' => [
             'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
-            'port' => env('REVERB_SERVER_PORT', 8080),
+            'port' => env('REVERB_SERVER_PORT', 8081),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
             'options' => [
@@ -58,15 +58,15 @@ return [
     ],
 
     /*
-    |--------------------------------------------------------------------------
-    | Reverb Applications
-    |--------------------------------------------------------------------------
-    |
-    | Here you may define how Reverb applications are managed. If you choose
-    | to use the "config" provider, you may define an array of apps which
-    | your server will support, including their connection credentials.
-    |
-    */
+     |--------------------------------------------------------------------------
+     | Reverb Applications
+     |--------------------------------------------------------------------------
+     |
+     | Here you may define how Reverb applications are managed. If you choose
+     | to use the "config" provider, you may define an array of apps which
+     | your server will support, including their connection credentials.
+     |
+     */
 
     'apps' => [
 

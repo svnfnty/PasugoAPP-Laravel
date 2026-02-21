@@ -70,7 +70,7 @@
         
         // Determine if we should use TLS based on the current page protocol or host
         const isSecure = window.location.protocol === 'https:' || wsHost.includes('railway.app');
-        const port = wsPort || (isSecure ? 443 : 8080);
+        const port = wsPort || (isSecure ? 443 : 8081);
 
         const echo = new Echo({
             broadcaster: 'reverb',

@@ -5,7 +5,7 @@ window.Pusher = Pusher;
 
 // WebSocket Configuration with proper protocol detection and fallbacks
 const wsHost = import.meta.env.VITE_REVERB_HOST || window.location.hostname;
-const wsPort = import.meta.env.VITE_REVERB_PORT || (window.location.protocol === 'https:' ? 443 : 8080);
+const wsPort = import.meta.env.VITE_REVERB_PORT || (window.location.protocol === 'https:' ? 443 : 8081);
 const wsKey = import.meta.env.VITE_REVERB_APP_KEY || 'app-key';
 const wsScheme = import.meta.env.VITE_REVERB_SCHEME || (window.location.protocol === 'https:' ? 'https' : 'http');
 
@@ -34,10 +34,10 @@ window.Echo = new Echo({
 function updateConnectionStatus(status, message) {
     connectionState = status;
     console.log(`[Echo WebSocket] ${status}: ${message}`);
-    
+
     // Dispatch custom event for UI updates
-    window.dispatchEvent(new CustomEvent('echo-websocket-status', { 
-        detail: { status, message } 
+    window.dispatchEvent(new CustomEvent('echo-websocket-status', {
+        detail: { status, message }
     }));
 }
 
@@ -45,13 +45,13 @@ function updateConnectionStatus(status, message) {
 function handleConnectionError(error) {
     console.error('[Echo WebSocket] Connection error:', error);
     updateConnectionStatus('error', 'Connection failed, attempting to reconnect...');
-    
+
     if (reconnectAttempts < maxReconnectAttempts) {
         reconnectAttempts++;
         const delay = Math.min(reconnectDelay * Math.pow(1.5, reconnectAttempts - 1), 30000);
-        
+
         console.log(`[Echo WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
-        
+
         setTimeout(() => {
             updateConnectionStatus('reconnecting', `Attempt ${reconnectAttempts}...`);
         }, delay);
