@@ -70,6 +70,6 @@
     @include('components.pin-modal')
 
     {{-- Mobile Authentication System --}}
-    <script src="{{ asset('js/mobile-auth.js') }}"></script>
+    <script src="{{ secure_asset('js/mobile-auth.js') }}"></script>
 </body>
 </html>

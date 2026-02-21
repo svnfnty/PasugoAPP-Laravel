@@ -24,22 +24,65 @@
      * Initialize the mobile auth system
      */
     function init() {
-        // Check if we're in a Capacitor environment
-        if (isCapacitor()) {
-            console.log('[MobileAuth] Capacitor environment detected');
-            setupMobileAuth();
+        console.log('[MobileAuth] Initializing... UA:', window.navigator?.userAgent);
+        
+        // Always setup mobile auth - it works in both mobile and browser
+        // This ensures session persistence works everywhere
+        setupMobileAuth();
+        
+        // Log environment for debugging
+        if (isMobileApp()) {
+            console.log('[MobileAuth] Mobile app environment detected');
         } else {
-            console.log('[MobileAuth] Browser environment - using standard session');
+            console.log('[MobileAuth] Browser environment - session persistence enabled');
         }
     }
 
     /**
-     * Check if running in Capacitor WebView
+     * Check if running in Mobile WebView (Capacitor or any WebView)
      */
-    function isCapacitor() {
-        return typeof window.Capacitor !== 'undefined' || 
-               (window.navigator && window.navigator.userAgent && 
-                window.navigator.userAgent.includes('Capacitor'));
+    function isMobileApp() {
+        // Check for Capacitor
+        if (typeof window.Capacitor !== 'undefined') {
+            console.log('[MobileAuth] Capacitor object detected');
+            return true;
+        }
+        
+        // Check user agent for WebView indicators
+        const ua = window.navigator?.userAgent || '';
+        const webViewIndicators = [
+            'Capacitor',
+            'WebView',
+            'wv',
+            'Android.*Version/[0-9]',
+        ];
+        
+        for (const indicator of webViewIndicators) {
+            if (ua.match(new RegExp(indicator, 'i'))) {
+                console.log('[MobileAuth] WebView detected via UA:', indicator);
+                return true;
+            }
+        }
+        
+        // Check for standalone mode (PWA)
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('[MobileAuth] Standalone PWA detected');
+            return true;
+        }
+        
+        // Check if running in Android WebView (no window.chrome but has Android in UA)
+        if (/Android/.test(ua) && !/Chrome\/[0-9]/.test(ua)) {
+            console.log('[MobileAuth] Android WebView detected');
+            return true;
+        }
+        
+        // For debugging: check if we should force mobile mode via URL param
+        if (window.location.search.includes('force_mobile=true')) {
+            console.log('[MobileAuth] Force mobile mode via URL param');
+            return true;
+        }
+        
+        return false;
     }
 
     /**
@@ -90,48 +133,75 @@
             return;
         }
 
-        // Check if we're already on a protected page
+        // Check if we're on login page - if so, try to auto-redirect
         const currentPath = window.location.pathname;
-        if (currentPath.includes('/dashboard') || currentPath.includes('/order')) {
-            console.log('[MobileAuth] Already on protected page, validating token...');
-            
-            isRestoring = true;
-            
-            try {
-                const response = await fetch(CONFIG.API_BASE_URL + '/token/validate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': getCsrfToken(),
-                    },
-                    body: JSON.stringify({
-                        token: token,
-                        device_id: getDeviceId(),
-                    }),
-                });
+        const isLoginPage = currentPath.includes('/login');
+        const isProtectedPage = currentPath.includes('/dashboard') || 
+                               currentPath.includes('/order') || 
+                               currentPath.includes('/map');
+        
+        console.log('[MobileAuth] Current path:', currentPath, 'Token exists, validating...');
+        
+        isRestoring = true;
+        
+        try {
+            const response = await fetch(CONFIG.API_BASE_URL + '/token/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    token: token,
+                    device_id: getDeviceId(),
+                }),
+            });
 
-                const data = await response.json();
+            const data = await response.json();
 
-                if (data.valid) {
-                    console.log('[MobileAuth] Token valid, session restored');
-                    currentToken = token;
-                    
-                    // Check if PIN is required
-                    if (data.pin_enabled) {
-                        showPinModal();
-                    }
-                    
-                    // Update UI to show logged-in state
-                    updateUIForLoggedInUser(data.user, data.user_type);
-                } else {
-                    console.log('[MobileAuth] Token invalid or expired');
-                    clearStoredAuth();
+            if (data.valid) {
+                console.log('[MobileAuth] Token valid, user:', data.user?.email);
+                currentToken = token;
+                
+                // Store PIN status
+                if (data.pin_enabled) {
+                    localStorage.setItem(CONFIG.PIN_ENABLED_KEY, 'true');
                 }
-            } catch (error) {
-                console.error('[MobileAuth] Error validating token:', error);
-            } finally {
-                isRestoring = false;
+                
+                // If on login page with valid token, redirect to dashboard
+                if (isLoginPage) {
+                    const dashboardUrl = data.user_type === 'rider' 
+                        ? '/rider/dashboard' 
+                        : '/client/dashboard';
+                    console.log('[MobileAuth] On login page, redirecting to:', dashboardUrl);
+                    window.location.replace(dashboardUrl);
+                    return;
+                }
+                
+                // If on protected page with PIN enabled, show PIN modal
+                if (isProtectedPage && data.pin_enabled) {
+                    console.log('[MobileAuth] PIN required, showing modal');
+                    showPinModal();
+                }
+                
+                // Update UI to show logged-in state
+                updateUIForLoggedInUser(data.user, data.user_type);
+            } else {
+                console.log('[MobileAuth] Token invalid or expired, clearing');
+                clearStoredAuth();
+                
+                // If on protected page with invalid token, redirect to login
+                if (isProtectedPage) {
+                    const loginUrl = currentPath.includes('rider') 
+                        ? '/rider/login' 
+                        : '/client/login';
+                    window.location.replace(loginUrl);
+                }
             }
+        } catch (error) {
+            console.error('[MobileAuth] Error validating token:', error);
+        } finally {
+            isRestoring = false;
         }
     }
 
@@ -463,11 +533,121 @@
     }
 
     /**
+     * Debug function to check current status
+     */
+    function debugStatus() {
+        console.log('[MobileAuth] Debug Status:');
+        console.log('  - isMobileApp:', isMobileApp());
+        console.log('  - Token exists:', !!localStorage.getItem(CONFIG.TOKEN_KEY));
+        console.log('  - User Type:', localStorage.getItem(CONFIG.USER_TYPE_KEY));
+        console.log('  - Device ID:', localStorage.getItem(CONFIG.DEVICE_ID_KEY));
+        console.log('  - PIN Enabled:', localStorage.getItem(CONFIG.PIN_ENABLED_KEY));
+        console.log('  - Current Path:', window.location.pathname);
+        
+        // Also show visual debug panel
+        showDebugPanel();
+    }
+    
+    /**
+     * Create and show debug panel
+     */
+    function showDebugPanel() {
+        let panel = document.getElementById('mobile-auth-debug');
+        
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = 'mobile-auth-debug';
+            panel.style.cssText = `
+                position: fixed;
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                background: rgba(0,0,0,0.9);
+                color: #0f0;
+                padding: 15px;
+                border-radius: 10px;
+                font-family: monospace;
+                font-size: 12px;
+                z-index: 99999;
+                max-height: 200px;
+                overflow-y: auto;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            `;
+            document.body.appendChild(panel);
+            
+            // Add close button
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                background: #f00;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                cursor: pointer;
+                font-size: 14px;
+                line-height: 1;
+            `;
+            closeBtn.onclick = () => panel.remove();
+            panel.appendChild(closeBtn);
+        }
+        
+        // Update content
+        const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+        const tokenPreview = token ? token.substring(0, 20) + '...' : 'none';
+        
+        panel.innerHTML = `
+            <div style="margin-bottom: 10px; font-weight: bold; color: #ff0;">📱 Mobile Auth Debug</div>
+            <div>isMobileApp: ${isMobileApp()}</div>
+            <div>User Agent: ${window.navigator?.userAgent?.substring(0, 50)}...</div>
+            <div>Token: ${tokenPreview}</div>
+            <div>User Type: ${localStorage.getItem(CONFIG.USER_TYPE_KEY) || 'none'}</div>
+            <div>Device ID: ${(localStorage.getItem(CONFIG.DEVICE_ID_KEY) || 'none').substring(0, 20)}...</div>
+            <div>PIN Enabled: ${localStorage.getItem(CONFIG.PIN_ENABLED_KEY) || 'false'}</div>
+            <div>Current Path: ${window.location.pathname}</div>
+            <div style="margin-top: 10px; color: #0ff;">Tap ✕ to close</div>
+        `;
+        
+        // Re-add close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f00;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+        `;
+        closeBtn.onclick = () => panel.remove();
+        panel.appendChild(closeBtn);
+    }
+    
+    /**
+     * Hide debug panel
+     */
+    function hideDebugPanel() {
+        const panel = document.getElementById('mobile-auth-debug');
+        if (panel) panel.remove();
+    }
+
+
+    /**
      * Public API
      */
     window.MobileAuth = {
         init: init,
-        isCapacitor: isCapacitor,
+        isMobileApp: isMobileApp,
         setupPin: setupPin,
         submitPin: submitPin,
         logout: logout,
@@ -475,7 +655,11 @@
         hidePinModal: hidePinModal,
         getDeviceId: getDeviceId,
         getToken: () => currentToken || localStorage.getItem(CONFIG.TOKEN_KEY),
+        debug: debugStatus,
+        showDebug: showDebugPanel,
+        hideDebug: hideDebugPanel,
     };
+
 
     // Auto-initialize when DOM is ready
     if (document.readyState === 'loading') {
@@ -483,5 +667,19 @@
     } else {
         init();
     }
+    
+    // Auto-show debug panel in mobile for first 10 seconds to help diagnose
+    if (isMobileApp()) {
+        setTimeout(() => {
+            console.log('[MobileAuth] Auto-showing debug panel for mobile');
+            showDebugPanel();
+        }, 1000);
+        
+        // Hide after 10 seconds
+        setTimeout(() => {
+            hideDebugPanel();
+        }, 11000);
+    }
+
 
 })();

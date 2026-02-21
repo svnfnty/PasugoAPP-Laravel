@@ -185,20 +185,59 @@ In `public/js/mobile-auth.js`, comment out the PIN setup prompt:
 
 ## 🐛 Troubleshooting
 
+### Debug Panel (NEW!)
+When running in mobile app, a debug panel automatically appears for 10 seconds showing:
+- Whether mobile app is detected
+- Current user agent
+- Token status
+- Device ID
+- PIN enabled status
+
+**To manually show debug panel:**
+```javascript
+MobileAuth.showDebug();
+```
+
+**To hide debug panel:**
+```javascript
+MobileAuth.hideDebug();
+```
+
 ### Issue: Session not persisting
-**Solution:** Check if "Remember Me" is checked. Without it, no persistent token is created.
+**Solution:** 
+1. Check if "Remember Me" is checked during login
+2. Check debug panel - does it show "Token: none"?
+3. Check browser console for API errors
+4. Ensure you're on HTTPS or localhost (Capacitor allows http)
 
 ### Issue: PIN modal not showing
-**Solution:** Check browser console for errors. Ensure `mobile-auth.js` is loaded.
+**Solution:** 
+1. Check debug panel for "PIN Enabled: true"
+2. Check browser console for errors
+3. Ensure `mobile-auth.js` is loaded (check Network tab)
 
 ### Issue: Token validation fails
-**Solution:** Check if token expired in database. Run:
+**Solution:** 
+1. Check if token expired in database:
 ```sql
 SELECT * FROM persistent_logins WHERE expires_at < NOW();
 ```
+2. Check if CSRF token is present in meta tag
+3. Check API response in Network tab
 
 ### Issue: App still logs out on close
-**Solution:** Ensure you're testing in actual Capacitor app, not browser. Browser sessions work differently.
+**Solution:** 
+1. Ensure you're testing in actual Capacitor app, not browser
+2. Check debug panel - is "isMobileApp: true"?
+3. Check if localStorage is working in WebView
+4. Try adding `?force_mobile=true` to URL for testing
+
+### Issue: "Remember Me" checkbox not working
+**Solution:**
+1. The form interception only works when checkbox is checked
+2. Check console for "[MobileAuth] Auth data stored" message
+3. Verify the form has `action` attribute containing "login"
+
 
 ---
 
