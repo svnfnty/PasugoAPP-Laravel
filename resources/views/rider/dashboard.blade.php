@@ -381,7 +381,9 @@
             </div>
         `;
         list.prepend(item);
-        if(window.navigator.vibrate) window.navigator.vibrate([200, 100, 200]);
+        try {
+            if(window.navigator.vibrate) window.navigator.vibrate([200, 100, 200]);
+        } catch(e) { console.warn('Vibration blocked'); }
     }
 
     function checkEmptyRequests() {
@@ -662,7 +664,7 @@
         modalBtn.disabled = true;
         modalBtn.innerText = 'PROCESSING...';
 
-        fetch('{{ route('rider.order.place_from_chat') }}', {
+        fetch('{{ route('rider.order.place_from_chat', [], false) }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             body: JSON.stringify({ 
@@ -688,8 +690,7 @@
     }
 
     function updateLocationOnServer(lat, lng) {
-        // Use secure URL to prevent Mixed Content errors
-        const updateUrl = '{{ secure_url(route('rider.location.update', [], false)) }}';
+        const updateUrl = '{{ route('rider.location.update', [], false) }}';
         
         fetch(updateUrl, {
             method: 'POST',
