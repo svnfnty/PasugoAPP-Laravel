@@ -229,7 +229,13 @@
                 const userType = form.action.includes('rider') ? 'rider' : 'client';
                 
                 try {
-                    const response = await fetch(form.action, {
+                    // Ensure HTTPS is used to avoid mixed content errors
+                    let actionUrl = form.action;
+                    if (window.location.protocol === 'https:' && actionUrl.startsWith('http:')) {
+                        actionUrl = actionUrl.replace('http:', 'https:');
+                    }
+                    
+                    const response = await fetch(actionUrl, {
                         method: 'POST',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
@@ -237,6 +243,7 @@
                         },
                         body: formData,
                     });
+
 
                     const data = await response.json();
 
@@ -340,6 +347,19 @@
         if (modal) {
             modal.style.display = 'flex';
             modal.classList.add('active');
+            
+            // Focus the hidden input after a short delay
+            setTimeout(() => {
+                const hiddenInput = document.getElementById('pin-hidden-input');
+                if (hiddenInput) {
+                    hiddenInput.focus();
+                    hiddenInput.click(); // Try to show mobile keyboard
+                }
+                
+                // Reset any previous error
+                const errorMsg = document.getElementById('pin-error-msg');
+                if (errorMsg) errorMsg.style.display = 'none';
+            }, 100);
         }
     }
 
@@ -352,7 +372,12 @@
             modal.style.display = 'none';
             modal.classList.remove('active');
         }
+        
+        // Clear the PIN input
+        const hiddenInput = document.getElementById('pin-hidden-input');
+        if (hiddenInput) hiddenInput.value = '';
     }
+
 
     /**
      * Verify PIN
@@ -443,14 +468,14 @@
     }
 
     /**
-     * Submit PIN for verification
+     * Submit PIN for verification (called from PIN modal)
      */
     async function submitPin() {
-        const inputs = document.querySelectorAll('.pin-digit');
-        const pin = Array.from(inputs).map(input => input.value).join('');
+        const hiddenInput = document.getElementById('pin-hidden-input');
+        const pin = hiddenInput ? hiddenInput.value : '';
         
-        if (pin.length !== 4) {
-            showPinError('Please enter all 4 digits');
+        if (!pin || pin.length !== 4) {
+            showPinError('Please enter 4 digits');
             return;
         }
 
@@ -458,13 +483,17 @@
         
         if (isValid) {
             hidePinModal();
-            clearPinInputs();
             // Reload page to show authenticated content
             window.location.reload();
         } else {
-            showPinError('Invalid PIN. Please try again.');
-            clearPinInputs();
-            inputs[0].focus();
+            showPinError('Invalid PIN. Try again.');
+            // Clear and focus
+            if (hiddenInput) {
+                hiddenInput.value = '';
+                hiddenInput.focus();
+            }
+            // Update dots display
+            updatePinDots('');
         }
     }
 
@@ -472,20 +501,29 @@
      * Show PIN error message
      */
     function showPinError(message) {
-        const errorEl = document.querySelector('.pin-error');
+        const errorEl = document.getElementById('pin-error-msg');
         if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
+            const errorText = errorEl.querySelector('.error-text');
+            if (errorText) errorText.textContent = message;
+            errorEl.style.display = 'flex';
         }
     }
 
     /**
-     * Clear PIN input fields
+     * Update PIN dots display
      */
-    function clearPinInputs() {
-        const inputs = document.querySelectorAll('.pin-digit');
-        inputs.forEach(input => input.value = '');
+    function updatePinDots(pin) {
+        const dots = document.querySelectorAll('.pin-dot');
+        dots.forEach((dot, index) => {
+            dot.classList.remove('filled', 'active');
+            if (index < pin.length) {
+                dot.classList.add('filled');
+            } else if (index === pin.length) {
+                dot.classList.add('active');
+            }
+        });
     }
+
 
     /**
      * Logout and clear stored auth

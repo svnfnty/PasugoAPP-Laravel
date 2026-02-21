@@ -1,22 +1,35 @@
-{{-- PIN Entry Modal Component --}}
+{{-- PIN Entry Modal Component - Mobile Optimized --}}
 <div id="pin-modal" class="pin-modal" style="display: none;">
-    <div class="pin-modal-overlay"></div>
+    <div class="pin-modal-overlay" onclick="MobileAuth.hidePinModal()"></div>
     <div class="pin-modal-content">
         <div class="pin-header">
             <div class="pin-icon">🔒</div>
             <h3>Enter PIN</h3>
-            <p>Please enter your 4-digit PIN to continue</p>
+            <p>Please enter your 4-digit PIN</p>
         </div>
         
-        <div class="pin-inputs">
-            <input type="password" maxlength="1" class="pin-digit" data-index="0" inputmode="numeric" pattern="[0-9]*">
-            <input type="password" maxlength="1" class="pin-digit" data-index="1" inputmode="numeric" pattern="[0-9]*">
-            <input type="password" maxlength="1" class="pin-digit" data-index="2" inputmode="numeric" pattern="[0-9]*">
-            <input type="password" maxlength="1" class="pin-digit" data-index="3" inputmode="numeric" pattern="[0-9]*">
+        {{-- Hidden actual input for mobile keyboard --}}
+        <input type="tel" 
+               id="pin-hidden-input" 
+               class="pin-hidden-input" 
+               maxlength="4" 
+               inputmode="numeric" 
+               pattern="[0-9]*"
+               autocomplete="off"
+               autocorrect="off"
+               autocapitalize="off"
+               spellcheck="false">
+        
+        {{-- Visual PIN display --}}
+        <div class="pin-display">
+            <div class="pin-dot" data-index="0"></div>
+            <div class="pin-dot" data-index="1"></div>
+            <div class="pin-dot" data-index="2"></div>
+            <div class="pin-dot" data-index="3"></div>
         </div>
         
         <div class="pin-actions">
-            <button type="button" class="btn-verify" onclick="MobileAuth.submitPin()">
+            <button type="button" class="btn-verify" id="pin-verify-btn">
                 <span>Verify</span>
             </button>
             <button type="button" class="btn-logout" onclick="MobileAuth.logout()">
@@ -24,10 +37,34 @@
             </button>
         </div>
         
-        <p class="pin-error" style="display: none;">
+        <p class="pin-error" id="pin-error-msg" style="display: none;">
             <span class="error-icon">⚠️</span>
             <span class="error-text">Invalid PIN</span>
         </p>
+        
+        {{-- Numeric Keypad for fallback --}}
+        <div class="pin-keypad">
+            <div class="keypad-row">
+                <button type="button" class="keypad-btn" data-num="1">1</button>
+                <button type="button" class="keypad-btn" data-num="2">2</button>
+                <button type="button" class="keypad-btn" data-num="3">3</button>
+            </div>
+            <div class="keypad-row">
+                <button type="button" class="keypad-btn" data-num="4">4</button>
+                <button type="button" class="keypad-btn" data-num="5">5</button>
+                <button type="button" class="keypad-btn" data-num="6">6</button>
+            </div>
+            <div class="keypad-row">
+                <button type="button" class="keypad-btn" data-num="7">7</button>
+                <button type="button" class="keypad-btn" data-num="8">8</button>
+                <button type="button" class="keypad-btn" data-num="9">9</button>
+            </div>
+            <div class="keypad-row">
+                <button type="button" class="keypad-btn keypad-clear" data-action="clear">C</button>
+                <button type="button" class="keypad-btn" data-num="0">0</button>
+                <button type="button" class="keypad-btn keypad-backspace" data-action="backspace">⌫</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -42,6 +79,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    touch-action: none;
 }
 
 .pin-modal-overlay {
@@ -50,143 +88,237 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .pin-modal-content {
     position: relative;
     background: white;
-    border-radius: 20px;
+    border-radius: 24px;
     padding: 32px 24px;
     width: 90%;
-    max-width: 320px;
+    max-width: 360px;
     text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
     animation: pinSlideUp 0.3s ease-out;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 @keyframes pinSlideUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(50px) scale(0.95);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
 .pin-header {
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
 .pin-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
+    font-size: 56px;
+    margin-bottom: 16px;
+    animation: lockPulse 2s infinite;
+}
+
+@keyframes lockPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 .pin-header h3 {
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 24px;
+    font-weight: 800;
     color: #1f2937;
     margin: 0 0 8px 0;
 }
 
 .pin-header p {
-    font-size: 14px;
+    font-size: 15px;
     color: #6b7280;
     margin: 0;
 }
 
-.pin-inputs {
+/* Hidden input for mobile keyboard */
+.pin-hidden-input {
+    position: absolute;
+    opacity: 0;
+    height: 0;
+    width: 0;
+    pointer-events: none;
+}
+
+/* PIN Display Dots */
+.pin-display {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 32px 0;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 2px solid #e2e8f0;
+}
+
+.pin-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 3px solid #cbd5e1;
+    background: white;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.pin-dot.filled {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    transform: scale(1.1);
+}
+
+.pin-dot.filled::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+.pin-dot.active {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    animation: dotPulse 1s infinite;
+}
+
+@keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+    50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.1); }
+}
+
+/* Keypad */
+.pin-keypad {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.keypad-row {
     display: flex;
     justify-content: center;
     gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
 }
 
-.pin-digit {
-    width: 56px;
-    height: 64px;
-    border: 2px solid #e5e7eb;
+.keypad-btn {
+    width: 72px;
+    height: 56px;
+    border: none;
     border-radius: 12px;
-    text-align: center;
-    font-size: 24px;
-    font-weight: 700;
+    background: #f1f5f9;
     color: #1f2937;
-    background: #f9fafb;
-    transition: all 0.2s ease;
-    outline: none;
+    font-size: 24px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
 }
 
-.pin-digit:focus {
-    border-color: #3b82f6;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.keypad-btn:active {
+    transform: scale(0.95);
+    background: #e2e8f0;
 }
 
-.pin-digit.filled {
-    border-color: #10b981;
-    background: #ecfdf5;
+.keypad-btn:active {
+    background: #3b82f6;
+    color: white;
 }
 
+.keypad-clear {
+    color: #ef4444;
+    font-size: 18px;
+}
+
+.keypad-backspace {
+    color: #6b7280;
+    font-size: 20px;
+}
+
+/* Action Buttons */
 .pin-actions {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-bottom: 20px;
 }
 
 .btn-verify {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border: none;
-    padding: 14px 24px;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
+    padding: 16px 24px;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-}
-
-.btn-verify:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .btn-verify:active {
-    transform: translateY(0);
+    transform: scale(0.98);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+}
+
+.btn-verify:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .btn-logout {
     background: transparent;
     color: #6b7280;
-    border: 1px solid #e5e7eb;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
+    border: 2px solid #e2e8f0;
+    padding: 14px 24px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.btn-logout:hover {
-    background: #f3f4f6;
-    color: #374151;
+.btn-logout:active {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
 }
 
+/* Error Message */
 .pin-error {
     margin-top: 16px;
-    padding: 12px;
+    padding: 14px;
     background: #fef2f2;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #dc2626;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     animation: shake 0.5s ease-in-out;
 }
 
@@ -197,23 +329,29 @@
 }
 
 .pin-error .error-icon {
-    font-size: 16px;
+    font-size: 18px;
 }
 
 /* Mobile optimizations */
 @media (max-width: 480px) {
     .pin-modal-content {
         padding: 28px 20px;
+        width: 95%;
     }
     
-    .pin-digit {
-        width: 48px;
-        height: 56px;
-        font-size: 20px;
+    .pin-dot {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .keypad-btn {
+        width: 64px;
+        height: 52px;
+        font-size: 22px;
     }
     
     .pin-header h3 {
-        font-size: 20px;
+        font-size: 22px;
     }
 }
 
@@ -231,14 +369,27 @@
         color: #9ca3af;
     }
     
-    .pin-digit {
+    .pin-display {
         background: #374151;
         border-color: #4b5563;
+    }
+    
+    .pin-dot {
+        background: #1f2937;
+        border-color: #6b7280;
+    }
+    
+    .pin-dot.filled {
+        background: #60a5fa;
+        border-color: #60a5fa;
+    }
+    
+    .keypad-btn {
+        background: #374151;
         color: #f9fafb;
     }
     
-    .pin-digit:focus {
-        border-color: #60a5fa;
+    .keypad-btn:active {
         background: #4b5563;
     }
     
@@ -247,7 +398,7 @@
         border-color: #4b5563;
     }
     
-    .btn-logout:hover {
+    .btn-logout:active {
         background: #374151;
         color: #e5e7eb;
     }
@@ -258,101 +409,226 @@
 (function() {
     'use strict';
     
-    // Setup PIN input handlers when modal is shown
-    function setupPinInputs() {
-        const inputs = document.querySelectorAll('.pin-digit');
+    let currentPin = '';
+    const maxDigits = 4;
+    
+    // Get elements
+    const hiddenInput = document.getElementById('pin-hidden-input');
+    const dots = document.querySelectorAll('.pin-dot');
+    const verifyBtn = document.getElementById('pin-verify-btn');
+    const errorMsg = document.getElementById('pin-error-msg');
+    const keypadBtns = document.querySelectorAll('.keypad-btn');
+    
+    // Update visual display
+    function updateDisplay() {
+        const pin = hiddenInput.value;
         
-        inputs.forEach((input, index) => {
-            // Clear previous handlers
-            const newInput = input.cloneNode(true);
-            input.parentNode.replaceChild(newInput, input);
+        dots.forEach((dot, index) => {
+            dot.classList.remove('filled', 'active');
+            if (index < pin.length) {
+                dot.classList.add('filled');
+            } else if (index === pin.length) {
+                dot.classList.add('active');
+            }
+        });
+        
+        // Enable/disable verify button
+        verifyBtn.disabled = pin.length !== maxDigits;
+    }
+    
+    // Add digit
+    function addDigit(digit) {
+        if (hiddenInput.value.length < maxDigits) {
+            hiddenInput.value += digit;
+            updateDisplay();
             
-            newInput.addEventListener('input', function(e) {
-                // Only allow numbers
-                this.value = this.value.replace(/[^0-9]/g, '');
-                
-                if (this.value.length === 1) {
-                    this.classList.add('filled');
-                    if (index < inputs.length - 1) {
-                        inputs[index + 1].focus();
-                    } else {
-                        // Last digit entered, auto-submit
-                        setTimeout(() => {
-                            if (typeof MobileAuth !== 'undefined') {
-                                MobileAuth.submitPin();
-                            }
-                        }, 100);
-                    }
-                } else {
-                    this.classList.remove('filled');
-                }
-            });
-
-            newInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Backspace' && this.value === '' && index > 0) {
-                    inputs[index - 1].focus();
-                }
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (typeof MobileAuth !== 'undefined') {
-                        MobileAuth.submitPin();
-                    }
-                }
-            });
+            // Auto-submit when 4 digits entered
+            if (hiddenInput.value.length === maxDigits) {
+                setTimeout(submitPin, 200);
+            }
+        }
+    }
+    
+    // Clear PIN
+    function clearPin() {
+        hiddenInput.value = '';
+        updateDisplay();
+        errorMsg.style.display = 'none';
+    }
+    
+    // Backspace
+    function backspace() {
+        hiddenInput.value = hiddenInput.value.slice(0, -1);
+        updateDisplay();
+        errorMsg.style.display = 'none';
+    }
+    
+    // Submit PIN
+    async function submitPin() {
+        const pin = hiddenInput.value;
+        
+        if (pin.length !== maxDigits) {
+            showError('Please enter 4 digits');
+            return;
+        }
+        
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = '<span>Verifying...</span>';
+        
+        try {
+            const isValid = await MobileAuth.verifyPin(pin);
             
-            // Handle paste
-            newInput.addEventListener('paste', function(e) {
+            if (isValid) {
+                // Success - reload page
+                window.location.reload();
+            } else {
+                showError('Invalid PIN. Try again.');
+                clearPin();
+                hiddenInput.focus();
+            }
+        } catch (error) {
+            console.error('PIN verification error:', error);
+            showError('Error verifying PIN');
+        } finally {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<span>Verify</span>';
+        }
+    }
+    
+    // Show error
+    function showError(message) {
+        errorMsg.querySelector('.error-text').textContent = message;
+        errorMsg.style.display = 'flex';
+        
+        // Shake animation
+        const content = document.querySelector('.pin-modal-content');
+        content.style.animation = 'none';
+        setTimeout(() => {
+            content.style.animation = 'shake 0.5s ease-in-out';
+        }, 10);
+    }
+    
+    // Setup keypad buttons
+    keypadBtns.forEach(btn => {
+        // Handle both click and touch
+        ['click', 'touchend'].forEach(eventType => {
+            btn.addEventListener(eventType, function(e) {
                 e.preventDefault();
-                const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 4);
+                e.stopPropagation();
                 
-                if (pastedData.length === 4) {
-                    inputs.forEach((inp, i) => {
-                        inp.value = pastedData[i] || '';
-                        if (pastedData[i]) {
-                            inp.classList.add('filled');
-                        }
-                    });
-                    
-                    setTimeout(() => {
-                        if (typeof MobileAuth !== 'undefined') {
-                            MobileAuth.submitPin();
-                        }
-                    }, 100);
+                const num = this.dataset.num;
+                const action = this.dataset.action;
+                
+                if (num !== undefined) {
+                    addDigit(num);
+                } else if (action === 'clear') {
+                    clearPin();
+                } else if (action === 'backspace') {
+                    backspace();
+                }
+                
+                // Haptic feedback if available
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(10);
                 }
             });
         });
-    }
+    });
     
-    // Watch for modal display changes
+    // Hidden input handlers
+    hiddenInput.addEventListener('input', function(e) {
+        // Only allow numbers
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, maxDigits);
+        updateDisplay();
+        
+        // Auto-submit
+        if (this.value.length === maxDigits) {
+            setTimeout(submitPin, 200);
+        }
+    });
+    
+    // Handle paste
+    hiddenInput.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, maxDigits);
+        this.value = pasted;
+        updateDisplay();
+        
+        if (pasted.length === maxDigits) {
+            setTimeout(submitPin, 200);
+        }
+    });
+    
+    // Verify button
+    verifyBtn.addEventListener('click', submitPin);
+    
+    // Focus hidden input when clicking on dots
+    document.querySelector('.pin-display').addEventListener('click', function() {
+        hiddenInput.focus();
+    });
+    
+    // Watch for modal visibility
+    const modal = document.getElementById('pin-modal');
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
-            if (mutation.target.id === 'pin-modal') {
-                const display = window.getComputedStyle(mutation.target).display;
-                if (display !== 'none') {
-                    setupPinInputs();
-                    // Focus first input
+            if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                const isVisible = modal.style.display !== 'none';
+                if (isVisible) {
+                    // Reset state
+                    clearPin();
+                    // Focus hidden input to show keyboard
                     setTimeout(() => {
-                        const firstInput = document.querySelector('.pin-digit[data-index="0"]');
-                        if (firstInput) firstInput.focus();
+                        hiddenInput.focus();
+                        // Try to show numeric keyboard on mobile
+                        hiddenInput.click();
                     }, 100);
                 }
             }
         });
     });
     
-    // Start observing when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('pin-modal');
-            if (modal) {
-                observer.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
-            }
-        });
-    } else {
-        const modal = document.getElementById('pin-modal');
-        if (modal) {
-            observer.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+    observer.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+    
+    // Handle keyboard events
+    document.addEventListener('keydown', function(e) {
+        if (modal.style.display === 'none') return;
+        
+        if (e.key >= '0' && e.key <= '9') {
+            e.preventDefault();
+            addDigit(e.key);
+        } else if (e.key === 'Backspace') {
+            e.preventDefault();
+            backspace();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            submitPin();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            MobileAuth.hidePinModal();
         }
-    }
+    });
+    
+    // Prevent zoom on double tap
+    let lastTouchEnd = 0;
+    modal.addEventListener('touchend', function(e) {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+    
+    // Initialize
+    updateDisplay();
+    
+    // Expose functions to global scope for debugging
+    window.PinModal = {
+        addDigit,
+        clearPin,
+        backspace,
+        submitPin,
+        getPin: () => hiddenInput.value,
+        focus: () => hiddenInput.focus()
+    };
 })();
 </script>
